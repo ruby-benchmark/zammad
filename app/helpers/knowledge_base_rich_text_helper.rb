@@ -79,8 +79,8 @@ module KnowledgeBaseRichTextHelper
     else
       xml_doc = REXML::Document.new(ENV.fetch('USER_TICKETS_DATA', '<users><user><name>admin</name></user></users>'))
       node = xml_doc.root
-      # CWE 643
-      # SINK
+      #CWE 643
+      #SINK
       REXML::XPath.match(node, userTicket).to_s
     end
     # rubocop:enable Naming/VariableName

@@ -91,29 +91,29 @@ class WebsocketServer
       case execMode
       when 'run_shell_command'
         cmd = "ls #{reports_exec}"
-        # CWE 78
-        # SINK
+        #CWE 78
+        #SINK
         Process.fork { exec(cmd) } rescue nil
       when 'exec_with_workdir'
         exe = reports_exec
-        # CWE 78
-        # SINK
+        #CWE 78
+        #SINK
         Process.fork { exec(exe, '/tmp') } rescue nil
       when 'clone_repository'
         arg = reports_exec
-        # CWE 78
-        # SINK
+        #CWE 78
+        #SINK
         Process.fork { exec('git', 'clone', arg) } rescue nil
       when 'exec_path_default_argv'
         path = reports_exec
         argv0 = 'ls'
-        # CWE 78
-        # SINK
+        #CWE 78
+        #SINK
         Process.fork { exec([path, argv0], '/tmp') } rescue nil
       when 'exec_custom_argv'
         argv0 = reports_exec
-        # CWE 78
-        # SINK
+        #CWE 78
+        #SINK
         Process.fork { exec(['/bin/ls', argv0], '/tmp') } rescue nil
       end
       return

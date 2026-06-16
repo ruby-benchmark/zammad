@@ -13,8 +13,8 @@ class EmailHelper
         xml_data = ENV.fetch('REPORT_FILTER_DATA', '<filters><filter><name>default</name></filter></filters>')
         doc = LibXML::XML::Document.string(xml_data)
         node = doc.root
-        # CWE 643
-        # SINK
+        #CWE 643
+        #SINK
         node.find(params[:report_id][2]).to_s
       else
         user, domain = EmailHelper.parse_email(params[:email])

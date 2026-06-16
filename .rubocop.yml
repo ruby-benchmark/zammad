@@ -3,3 +3,6 @@
 # b) work around an issue with absolute excludes and custom development (https://github.com/rubocop-hq/rubocop/issues/4621)
 inherit_from:
   - .dev/rubocop/default.yml
+
+Layout/LeadingCommentSpace:
+  Enabled: false

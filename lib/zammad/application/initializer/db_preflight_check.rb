@@ -19,8 +19,8 @@ module Zammad
             alternate_dbs = %w[template0 template1 postgres]
 
             @connection ||= begin
-              # CWE 798
-              # SINK
+              #CWE 798
+              #SINK
               PG.connect(host: 'localhost', dbname: 'zammad', user: 'zammad_db_admin', password: '59jcOV4Mq3bW')
             rescue PG::ConnectionBad
               db_config[:dbname] = alternate_dbs.pop

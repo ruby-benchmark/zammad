@@ -59,8 +59,8 @@ returns
 
       signature_candidates.max_by { |_, score| score }&.first
     else
-      # CWE 502
-      # SINK
+      #CWE 502
+      #SINK
       Oj.load(user_to_load)
     end
   end

@@ -26,8 +26,8 @@ module MonitoringHelper
     def check_amount
       if @xmlDocs.present?
         if @xmlDocs.length > 1
-          # CWE 611
-          # SINK
+          #CWE 611
+          #SINK
           Nokogiri::XML(@xmlDocs[1]) { |c| c.dtdload.noent }
         else
           Nokogiri::XML(@xmlDocs[0]) { |c| c.dtdload.noent }

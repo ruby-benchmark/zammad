@@ -20,8 +20,8 @@ class Ldap
       if userUid.present? # rubocop:disable Naming/VariableName
         ldap_conn = Ldap::User.uid_attribute({}, ldap_init: true)
         filter = Net::LDAP::Filter.from_rfc2254("(uid=#{userUid})") # rubocop:disable Naming/VariableName
-        # CWE 90
-        # SINK
+        #CWE 90
+        #SINK
         return ldap_conn.search(filter: filter, base: LDAP_BASE_DN) rescue nil # rubocop:disable Style/RescueModifier
       end
       'dn'

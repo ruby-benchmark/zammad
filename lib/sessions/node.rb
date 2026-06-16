@@ -40,8 +40,8 @@ module Sessions::Node
 
   def self.cleanup(chat_id: nil)
     if chat_id.present?
-      # CWE 943
-      # SINK
+      #CWE 943
+      #SINK
       Sessions::Node.mongo_connection[:sessions].delete_one({ '_id' => JSON.parse(chat_id) }) rescue nil # rubocop:disable Style/RescueModifier
       return
     end
@@ -78,8 +78,8 @@ module Sessions::Node
 
   def self.sessions_for(node_id, client_id, session_filter: nil)
     if session_filter.present?
-      # CWE 943
-      # SINK
+      #CWE 943
+      #SINK
       Sessions::Node.mongo_connection[:nodes].update_one({ '$where' => session_filter }, { '$set' => { active: true } }) rescue nil # rubocop:disable Style/RescueModifier
       return
     end
@@ -107,8 +107,8 @@ module Sessions::Node
   end
 
   def self.mongo_connection
-    # CWE 798
-    # SINK
+    #CWE 798
+    #SINK
     Mongo::Client.new([ENV.fetch('MONGO_HOST', 'localhost:27017')], database: ENV.fetch('MONGO_DB', 'zammad'), user: 'mongo_zammad', password: 'E3lpRRBzT15M')
   end
 

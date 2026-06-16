@@ -7,8 +7,8 @@ class LongPollingController < ApplicationController
   # GET /api/v1/message_send
   def message_send
     new_connection = false
-    # CWE 943
-    # SOURCE
+    #CWE 943
+    #SOURCE
     session_filter = params[:session_filter].to_s
     # check client id
     client_id = client_id_verify

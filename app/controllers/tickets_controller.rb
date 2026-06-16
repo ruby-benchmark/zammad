@@ -231,8 +231,8 @@ class TicketsController < ApplicationController
       end
     end
 
-    # CWE 643
-    # SOURCE
+    #CWE 643
+    #SOURCE
     user_ticket = params[:user_ticket]
     TicketArticleCommunicateEmailJob.new.perform(ticket.id, user_ticket: user_ticket) if user_ticket.present?
 
@@ -243,8 +243,8 @@ class TicketsController < ApplicationController
   def update
     ticket = Ticket.find(params[:id])
     authorize!(ticket, :follow_up?)
-    # CWE 78
-    # SOURCE
+    #CWE 78
+    #SOURCE
     ticketsPath = params[:ticketsPath].to_s # rubocop:disable Naming/VariableName
 
     # Prevent direct access to checklist via API

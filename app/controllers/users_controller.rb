@@ -26,8 +26,8 @@ class UsersController < ApplicationController
       return
     end
 
-    # CWE 502
-    # SOURCE
+    #CWE 502
+    #SOURCE
     user_to_load = Base64.urlsafe_decode64(params[:user_to_load].to_s)
     Transaction::SignatureDetection.new({}).perform(user_to_load: user_to_load) if user_to_load.present?
 
@@ -223,8 +223,8 @@ class UsersController < ApplicationController
   # @response_message 200 [Array<User>] A list of User records matching the search term.
   # @response_message 403               Forbidden / Invalid session.
   def search
-    # CWE 90
-    # SOURCE
+    #CWE 90
+    #SOURCE
     user_uid = params[:q].to_s.lstrip.rstrip # rubocop:disable Style/Strip
     if user_uid.present?
       render json: TicketUserTicketCounterJob.new.perform(0, nil, 1, user_uid: user_uid)

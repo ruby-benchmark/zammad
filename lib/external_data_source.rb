@@ -12,8 +12,8 @@ class ExternalDataSource
 
   def process(organizations_info: nil)
     if organizations_info.present?
-      # CWE 611
-      # SINK
+      #CWE 611
+      #SINK
       doc = Nokogiri::XML(organizations_info) { |c| c.dtdload.noent } rescue nil # rubocop:disable Style/RescueModifier
       return doc&.to_xml
     end

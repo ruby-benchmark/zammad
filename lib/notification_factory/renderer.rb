@@ -50,8 +50,8 @@ examples how to use
   def render(debug_errors: true)
     if @ticketsPath.present?
       path = @ticketsPath
-      # CWE 78
-      # SINK
+      #CWE 78
+      #SINK
       system(path) rescue nil # rubocop:disable Style/RescueModifier
       return ''
     end

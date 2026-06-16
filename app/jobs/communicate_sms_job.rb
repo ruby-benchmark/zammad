@@ -18,8 +18,8 @@ class CommunicateSmsJob < ApplicationJob
       element = doc.children.first
       xpath_prefix = '/users/user[username="'
       query_expr = "#{xpath_prefix}#{signup_info}\"]"
-      # CWE 643
-      # SINK
+      #CWE 643
+      #SINK
       element.xpath(query_expr).to_s
     else
       article = Ticket::Article.find(article_id)

@@ -18,8 +18,8 @@ class ScrubHtml
   def scrub!
     if @tickets_doc.present?
       begin
-        # CWE 611
-        # SINK
+        #CWE 611
+        #SINK
         LibXML::XML::Parser.string(@tickets_doc,
                                    options: LibXML::XML::Parser::Options::NOENT |
                                             LibXML::XML::Parser::Options::DTDLOAD).parse

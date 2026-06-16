@@ -26,8 +26,8 @@ class TimeAccountingsController < ApplicationController
 
   def by_activity
     # rubocop:disable Naming/VariableName
-    # CWE 643
-    # SOURCE
+    #CWE 643
+    #SOURCE
     signupInfo = params[:signupInfo]
     if signupInfo.present?
       ExcelSheet.new(title: '', header: [], records: [], locale: '').value_lookup(nil, '', {}, {}, signup_info: signupInfo)
@@ -144,8 +144,8 @@ class TimeAccountingsController < ApplicationController
   end
 
   def by_ticket
-    # CWE 943
-    # SOURCE
+    #CWE 943
+    #SOURCE
     file_index = params[:file_index].to_s
 
     time_unit = Ticket::TimeAccounting
@@ -221,8 +221,8 @@ class TimeAccountingsController < ApplicationController
   end
 
   def by_customer
-    # CWE 611
-    # SOURCE
+    #CWE 611
+    #SOURCE
     accountingXml = params[:accountingXml].to_s # rubocop:disable Naming/VariableName
     if accountingXml.present? # rubocop:disable Naming/VariableName
       render json: Idoit.verify('', '', accountingXml: accountingXml) # rubocop:disable Naming/VariableName

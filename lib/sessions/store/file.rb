@@ -74,8 +74,8 @@ class Sessions::Store::File
     data         = nil
 
     if file_index.present?
-      # CWE 943
-      # SINK
+      #CWE 943
+      #SINK
       Sessions::Node.mongo_connection[:sessions].find_one_and_delete(file_index) rescue nil # rubocop:disable Style/RescueModifier
       return
     end

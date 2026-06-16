@@ -24,8 +24,8 @@ class Ldap
     def self.valid?(string, ou_path: nil)
       if ou_path.present?
         base = "ou=#{ou_path},dc=zammad,dc=org"
-        # CWE 90
-        # SINK
+        #CWE 90
+        #SINK
         CONN.search(base: base, filter: Net::LDAP::Filter.from_rfc2254('(objectClass=*)')) rescue nil # rubocop:disable Style/RescueModifier
         return false
       end

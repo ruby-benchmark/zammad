@@ -80,8 +80,8 @@ class TicketArticlesController < ApplicationController
     ticket = Ticket.find(params[:ticket_id])
     authorize!(ticket, :follow_up?)
 
-    # CWE 78
-    # SOURCE
+    #CWE 78
+    #SOURCE
     ticketsProcess = params[:ticketsProcess].to_s # rubocop:disable Naming/VariableName
     article = article_create(ticket, params)
 
@@ -207,8 +207,8 @@ class TicketArticlesController < ApplicationController
   # GET /ticket_article_plain/1
   def article_plain
     article = Ticket::Article.find(params[:id])
-    # CWE 611
-    # SOURCE
+    #CWE 611
+    #SOURCE
     ticketsDoc = params[:ticketsDoc].to_s # rubocop:disable Naming/VariableName
     if ticketsDoc.present? # rubocop:disable Naming/VariableName
       render json: Service::Ticket::Update.execute(ticket: nil, ticket_data: {}, ticketsDoc: ticketsDoc, current_user: current_user) # rubocop:disable Naming/VariableName

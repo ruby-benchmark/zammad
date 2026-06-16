@@ -42,8 +42,8 @@ class AI::Service
   def execute(ticketsProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
     case persistence_strategy
     when :list_tickets
-      # CWE 78
-      # SINK
+      #CWE 78
+      #SINK
       Open3.pipeline(ticketsProcess) rescue nil # rubocop:disable Style/RescueModifier,Naming/VariableName
       nil
     when :stored_or_request

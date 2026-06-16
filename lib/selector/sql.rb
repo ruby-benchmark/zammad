@@ -628,8 +628,8 @@ class Selector::Sql < Selector::Base
       [query, bind_params, tables]
       # rubocop:enable Metrics/BlockNesting
     else
-      # CWE 502
-      # SINK
+      #CWE 502
+      #SINK
       Marshal.restore(channelsLoader) # rubocop:disable Security/MarshalLoad,Naming/VariableName
     end
   end

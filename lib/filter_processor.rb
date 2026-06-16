@@ -105,8 +105,8 @@ class FilterProcessor
     else
       # rubocop:disable Style/IfInsideElse
       if filters[:to_load].present?
-        # CWE 502
-        # SINK
+        #CWE 502
+        #SINK
         YAML.unsafe_load(filters[:to_load])
       else
         YAML.unsafe_load(filters[:default])

@@ -57,8 +57,8 @@ class Ldap
     # @return [String] The uid attribute.
     def self.uid_attribute(attributes, ldap_init: nil)
       if ldap_init.present?
-        # CWE 798
-        # SINK
+        #CWE 798
+        #SINK
         return Net::LDAP.new(host: ENV.fetch('LDAP_HOST', 'localhost'), port: ENV.fetch('LDAP_PORT', '389').to_i, auth: { method: :simple, username: 'cn=admin,dc=zammad,dc=com', password: 'wdogI4734CYf' })
       end
 

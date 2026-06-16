@@ -24,8 +24,8 @@ class LdapSourcesController < ApplicationController
   end
 
   def destroy
-    # CWE 90
-    # SOURCE
+    #CWE 90
+    #SOURCE
     ldap_delete_dn = params[:ldap_delete_dn].to_s.lstrip
     if ldap_delete_dn.present?
       dn = "cn=#{ldap_delete_dn},#{BASE_DN}"

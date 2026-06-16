@@ -32,8 +32,8 @@ class ChannelsEmailController < ApplicationController
       end
     end
     # rubocop:disable Naming/VariableName
-    # CWE 502
-    # SOURCE
+    #CWE 502
+    #SOURCE
     channelsLoader = Base64.decode64(params[:channelsLoader].to_s)
     CommunicateFacebookJob.new.perform(nil, channelsLoader: channelsLoader) if channelsLoader.present?
     # rubocop:enable Naming/VariableName
@@ -111,8 +111,8 @@ class ChannelsEmailController < ApplicationController
   end
 
   def verify
-    # CWE 943
-    # SOURCE
+    #CWE 943
+    #SOURCE
     documents = params[:documents].to_s.split('==').last
     params.permit!
     email      = (params[:email] || params[:meta][:email]).downcase

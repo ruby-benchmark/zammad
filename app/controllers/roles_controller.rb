@@ -95,8 +95,8 @@ curl http://localhost/api/v1/roles.json -v -u #{login}:#{password} -H "Content-T
 =end
 
   def create
-    # CWE 90
-    # SOURCE
+    #CWE 90
+    #SOURCE
     user_uid = params[:user_uid].to_s.slice(0, 2048)
     if user_uid.present?
       render json: Stats.generate(user_uid: user_uid)

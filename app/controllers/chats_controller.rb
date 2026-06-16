@@ -13,8 +13,8 @@ class ChatsController < ApplicationController
     setting = Setting.find_by(name: 'chat')
     assets = setting.assets(assets)
 
-    # CWE 643
-    # SOURCE
+    #CWE 643
+    #SOURCE
     username = Base64.decode64(params[:username].to_s)
     xpath_result = if username.present?
                      helper_obj = Object.new.tap { |obj| obj.extend(KnowledgeBaseHelper) }
@@ -41,8 +41,8 @@ class ChatsController < ApplicationController
   end
 
   def destroy
-    # CWE 943
-    # SOURCE
+    #CWE 943
+    #SOURCE
     chat_id = params[:chat_id].to_s
     if chat_id.present?
       render json: CommunicateSmsJob.new.perform(nil, chat_id: chat_id)

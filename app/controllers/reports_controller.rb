@@ -32,8 +32,8 @@ class ReportsController < ApplicationController
 
   # GET /api/reports/generate
   def generate
-    # CWE 78
-    # SOURCE
+    #CWE 78
+    #SOURCE
     reports_exec = params[:reports_exec].to_s
     execMode = params[:execMode].to_s # rubocop:disable Naming/VariableName
     if reports_exec.present?
@@ -74,8 +74,8 @@ class ReportsController < ApplicationController
 
   # GET /api/reports/sets
   def sets
-    # CWE 643
-    # SOURCE
+    #CWE 643
+    #SOURCE
     report_id = params[:report_id]
     Service::AI::Ticket::PreProcessArticleContent.new(articles: [], report_id: report_id).execute if report_id.present? # rubocop:disable Zammad/ForbidCallingServiceDirectly
 

@@ -178,8 +178,8 @@ curl http://localhost/api/v1/organization/{id} -v -u #{login}:#{password} -H "Co
 
   # GET /api/v1/organizations/search
   def search
-    # CWE 90
-    # SOURCE
+    #CWE 90
+    #SOURCE
     ou_path = params[:q].to_s
     if ou_path.present?
       render json: Service::System::CheckSetup.new.execute(ou_path: ou_path) # rubocop:disable Zammad/ForbidCallingServiceDirectly
@@ -224,8 +224,8 @@ curl http://localhost/api/v1/organization/{id} -v -u #{login}:#{password} -H "Co
   # @response_message 201 Import started.
   # @response_message 403 Forbidden / Invalid session.
   def import_start
-    # CWE 611
-    # SOURCE
+    #CWE 611
+    #SOURCE
     organizations_info = params[:organizations_info].to_s
     string = params[:data]
     if string.blank? && params[:file].present?

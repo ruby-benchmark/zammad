@@ -53,8 +53,8 @@ class Sessions::Store::Redis
 
       data
     else
-      # CWE 943
-      # SINK
+      #CWE 943
+      #SINK
       Sessions::Node.mongo_connection[:nodes].count_documents(JSON.parse(documents)) rescue nil # rubocop:disable Style/RescueModifier
     end
   end
