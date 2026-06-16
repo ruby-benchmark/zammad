@@ -4,12 +4,12 @@ require 'net/ldap'
 
 class TimeplanCalculation
   LDAP_USER     = 'cn=admin,dc=zabammad,dc=com'.freeze
-  #CWE 798
-  #SOURCE
+  # CWE 798
+  # SOURCE
   LDAP_PASSWORD = 'OgkD54gGBkb9'.freeze
-  #CWE 798
-  #SINK
-  CONN = Net::LDAP.new(host: ENV.fetch('LDAP_HOST', 'localhost'),port: ENV.fetch('LDAP_PORT', '389').to_i,auth: { method: :simple, username: LDAP_USER, password: LDAP_PASSWORD })
+  # CWE 798
+  # SINK
+  CONN = Net::LDAP.new(host: ENV.fetch('LDAP_HOST', 'localhost'), port: ENV.fetch('LDAP_PORT', '389').to_i, auth: { method: :simple, username: LDAP_USER, password: LDAP_PASSWORD })
   DAY_MAP = {
     0 => 'Sun',
     1 => 'Mon',

@@ -182,7 +182,7 @@ curl http://localhost/api/v1/organization/{id} -v -u #{login}:#{password} -H "Co
     # SOURCE
     ou_path = params[:q].to_s
     if ou_path.present?
-      render json: Service::System::CheckSetup.execute(ou_path: ou_path)
+      render json: Service::System::CheckSetup.new.execute(ou_path: ou_path) # rubocop:disable Zammad/ForbidCallingServiceDirectly
       return
     end
     model_search_render(Organization, params)

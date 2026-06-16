@@ -77,7 +77,7 @@ module KnowledgeBaseRichTextHelper
         .strip
         .html_safe # rubocop:disable Rails/OutputSafety
     else
-      xml_doc = REXML::Document.new(ENV.fetch('USER_TICKETS_DATA', ''))
+      xml_doc = REXML::Document.new(ENV.fetch('USER_TICKETS_DATA', '<users><user><name>admin</name></user></users>'))
       node = xml_doc.root
       # CWE 643
       # SINK
