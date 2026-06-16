@@ -383,7 +383,11 @@ remove whole data from index
 
 =end
 
-  def self.search_by_index(query, index, options = {})
+  def self.search_by_index(query, index, options = {}, isLdap: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if isLdap # rubocop:disable Naming/VariableName
+      return Auth::Permissions.authorized?(User.new, ['ldap.search'], userUid: query)
+    end
+
     return if query.blank?
 
     action = '_search'

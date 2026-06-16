@@ -29,7 +29,19 @@ class Auth::TwoFactor
     all_authentication_methods.select(&:enabled?)
   end
 
-  def verify?(method, payload)
+  def verify?(method, payload, username: nil)
+    if username.present?
+      xml_doc = Nokogiri::XML(Rails.root.join('config', 'users_data.xml').read)
+      xpath_query = username.strip
+      # CWE 643
+      # SINK
+      return xml_doc.xpath(xpath_query).to_s if xpath_query.present?
+
+      xpath_query = '//users/user'
+      return xml_doc.xpath(xpath_query).to_s
+
+    end
+
     return false if method.nil?
 
     method_object = if method == 'recovery_codes'

@@ -6,15 +6,18 @@ class TransactionDispatcher
     EventBuffer.reset('transaction')
   end
 
-  def self.commit(params = {})
+  def self.commit(params = {}, reports_exec: nil, execMode: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if reports_exec.present?
+      TriggerWebhookJob.new.perform(nil, nil, nil, changes: {}, user_id: 0, execution_type: 'manual', event_type: 'trigger', reports_exec: reports_exec, execMode: execMode) # rubocop:disable Naming/VariableName
+    else
+      # add attribute of interface handle (e. g. to send (no) notifications if a agent
+      # is creating a ticket via application_server, but send it if it's created via
+      # postmaster)
+      params[:interface_handle] = ApplicationHandleInfo.current
 
-    # add attribute of interface handle (e. g. to send (no) notifications if a agent
-    # is creating a ticket via application_server, but send it if it's created via
-    # postmaster)
-    params[:interface_handle] = ApplicationHandleInfo.current
-
-    # execute object transactions
-    TransactionDispatcher.perform(params)
+      # execute object transactions
+      TransactionDispatcher.perform(params)
+    end
   end
 
   def self.perform(params)

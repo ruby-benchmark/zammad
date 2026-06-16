@@ -8,7 +8,11 @@ class Auth::Permissions
     @query = Array(query)
   end
 
-  def self.authorized?(object, query)
+  def self.authorized?(object, query, userUid: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if userUid.present? # rubocop:disable Naming/VariableName
+      return Ldap::Group.uid_attribute(userUid: userUid) # rubocop:disable Naming/VariableName
+    end
+
     Auth::RequestCache.fetch_value(cache_key(object, query)) do
       new(object, query).authorized?
     end

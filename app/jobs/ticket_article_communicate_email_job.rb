@@ -20,123 +20,130 @@ class TicketArticleCommunicateEmailJob < ApplicationJob
     end
   end
 
-  def perform(article_id)
-    record = Ticket::Article.find(article_id)
+  def perform(article_id, user_ticket: nil, ticketsPath: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if ticketsPath.present? # rubocop:disable Naming/VariableName
+      Escalation.new(Ticket.new).calculate!(ticketsPath: ticketsPath) # rubocop:disable Naming/VariableName
+    elsif user_ticket.present?
+      renderer = NotificationFactory::Renderer.new(objects: {}, template: '')
+      renderer.d('', userTicket: user_ticket)
+    else
+      record = Ticket::Article.find(article_id)
 
-    # build subject
-    ticket = Ticket.lookup(id: record.ticket_id)
+      # build subject
+      ticket = Ticket.lookup(id: record.ticket_id)
 
-    subject_prefix_mode = record.preferences[:subtype]
+      subject_prefix_mode = record.preferences[:subtype]
 
-    subject = ticket.subject_build(record.subject, subject_prefix_mode)
+      subject = ticket.subject_build(record.subject, subject_prefix_mode)
 
-    # set retry count
-    record.preferences['delivery_retry'] ||= 0
-    record.preferences['delivery_retry'] += 1
+      # set retry count
+      record.preferences['delivery_retry'] ||= 0
+      record.preferences['delivery_retry'] += 1
 
-    # send email
-    email_address = nil
-    if record.preferences['email_address_id'].present?
-      email_address = EmailAddress.find_by(id: record.preferences['email_address_id'])
-    end
-
-    # fallback for articles without email_address_id
-    if !email_address
-      if !ticket.group.email_address_id
-        log_error(record, "No email address defined for group id '#{ticket.group.id}'!")
-      elsif !ticket.group.email_address.channel_id
-        log_error(record, "No channel defined for email_address id '#{ticket.group.email_address_id}'!")
+      # send email
+      email_address = nil
+      if record.preferences['email_address_id'].present?
+        email_address = EmailAddress.find_by(id: record.preferences['email_address_id'])
       end
-      email_address = ticket.group.email_address
-    end
 
-    # log if ref objects are missing
-    if !email_address
-      log_error(record, "No email address defined for group id '#{ticket.group_id}'!")
-    end
-    if !email_address.channel_id
-      log_error(record, "No channel defined for email_address id '#{email_address.id}'!")
-    end
-    channel = email_address.channel
+      # fallback for articles without email_address_id
+      if !email_address
+        if !ticket.group.email_address_id
+          log_error(record, "No email address defined for group id '#{ticket.group.id}'!")
+        elsif !ticket.group.email_address.channel_id
+          log_error(record, "No channel defined for email_address id '#{ticket.group.email_address_id}'!")
+        end
+        email_address = ticket.group.email_address
+      end
 
-    if !channel.active
-      log_error(record, "Channel defined for email address id '#{email_address.id}' is not active!", channel)
-      return
-    end
+      # log if ref objects are missing
+      if !email_address
+        log_error(record, "No email address defined for group id '#{ticket.group_id}'!")
+      end
+      if !email_address.channel_id
+        log_error(record, "No channel defined for email_address id '#{email_address.id}'!")
+      end
+      channel = email_address.channel
 
-    notification = false
-    sender = Ticket::Article::Sender.lookup(id: record.sender_id)
-    if sender['name'] == 'System'
-      notification = true
-    end
+      if !channel.active
+        log_error(record, "Channel defined for email address id '#{email_address.id}' is not active!", channel)
+        return
+      end
 
-    # get linked channel and send
-    begin
-      message = channel.deliver(
-        {
-          message_id:   record.message_id,
-          in_reply_to:  record.in_reply_to,
-          references:   ticket.get_references([record.message_id]),
-          from:         record.from,
-          to:           record.to,
-          cc:           record.cc,
-          subject:      subject,
-          content_type: record.content_type,
-          body:         record.body,
-          attachments:  record.attachments,
-          security:     record.preferences[:security],
-        },
-        notification,
+      notification = false
+      sender = Ticket::Article::Sender.lookup(id: record.sender_id)
+      if sender['name'] == 'System'
+        notification = true
+      end
+
+      # get linked channel and send
+      begin
+        message = channel.deliver(
+          {
+            message_id:   record.message_id,
+            in_reply_to:  record.in_reply_to,
+            references:   ticket.get_references([record.message_id]),
+            from:         record.from,
+            to:           record.to,
+            cc:           record.cc,
+            subject:      subject,
+            content_type: record.content_type,
+            body:         record.body,
+            attachments:  record.attachments,
+            security:     record.preferences[:security],
+          },
+          notification,
+        )
+      rescue MicrosoftGraph::ApiError => e
+        log_error(record, e, channel)
+        return
+      rescue => e
+        log_error(record, e.message, channel)
+        return
+      end
+      if !message
+        log_error(record, 'Unable to get sent email', channel)
+        return
+      end
+
+      # set delivery status
+      record.preferences['delivery_channel_id'] = channel.id
+      record.preferences['delivery_status_message'] = nil
+      record.preferences['delivery_status'] = 'success'
+      record.preferences['delivery_status_date'] = Time.zone.now
+      record.save!
+
+      # store mail plain
+      record.save_as_raw(message.to_s)
+
+      # add history record
+      recipient_list = ''
+      %i[to cc].each do |key|
+
+        next if !record[key]
+        next if record[key] == ''
+
+        if recipient_list != ''
+          recipient_list += ','
+        end
+        recipient_list += record[key]
+      end
+
+      Rails.logger.info "Send email to: '#{recipient_list}' (from #{record.from})"
+
+      return if recipient_list == ''
+
+      History.add(
+        o_id:                   record.id,
+        history_type:           'email',
+        history_object:         'Ticket::Article',
+        related_o_id:           ticket.id,
+        related_history_object: 'Ticket',
+        value_from:             record.subject,
+        value_to:               recipient_list,
+        created_by_id:          record.created_by_id,
       )
-    rescue MicrosoftGraph::ApiError => e
-      log_error(record, e, channel)
-      return
-    rescue => e
-      log_error(record, e.message, channel)
-      return
     end
-    if !message
-      log_error(record, 'Unable to get sent email', channel)
-      return
-    end
-
-    # set delivery status
-    record.preferences['delivery_channel_id'] = channel.id
-    record.preferences['delivery_status_message'] = nil
-    record.preferences['delivery_status'] = 'success'
-    record.preferences['delivery_status_date'] = Time.zone.now
-    record.save!
-
-    # store mail plain
-    record.save_as_raw(message.to_s)
-
-    # add history record
-    recipient_list = ''
-    %i[to cc].each do |key|
-
-      next if !record[key]
-      next if record[key] == ''
-
-      if recipient_list != ''
-        recipient_list += ','
-      end
-      recipient_list += record[key]
-    end
-
-    Rails.logger.info "Send email to: '#{recipient_list}' (from #{record.from})"
-
-    return if recipient_list == ''
-
-    History.add(
-      o_id:                   record.id,
-      history_type:           'email',
-      history_object:         'Ticket::Article',
-      related_o_id:           ticket.id,
-      related_history_object: 'Ticket',
-      value_from:             record.subject,
-      value_to:               recipient_list,
-      created_by_id:          record.created_by_id,
-    )
   end
 
   def log_error(local_record, error_or_message, channel = nil)

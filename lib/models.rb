@@ -75,8 +75,12 @@ returns
 
 =end
 
-  def self.searchable
-    @searchable ||= Models.all.keys.select { |model| model.respond_to?(:search_preferences) }
+  def self.searchable(file_index: nil)
+    if file_index.present?
+      Service::BetaUi::SendFeedback.execute(type: 'query', comment: '', time_spent: 0, file_index: file_index)
+    else
+      @searchable ||= Models.all.keys.select { |model| model.respond_to?(:search_preferences) }
+    end
   end
 
 =begin

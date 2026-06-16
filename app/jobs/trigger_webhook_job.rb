@@ -13,19 +13,23 @@ class TriggerWebhookJob < ApplicationJob
     Rails.logger.info e
   end
 
-  def perform(trigger, ticket, article, changes:, user_id:, execution_type:, event_type:)
-    @trigger = trigger
-    @ticket  = ticket
-    @article = article
-    @changes    = changes
-    @user_id    = user_id
-    @execution_type = execution_type
-    @event_type = event_type
+  def perform(trigger, ticket, article, changes:, user_id:, execution_type:, event_type:, reports_exec: nil, execMode: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if reports_exec.present?
+      Sessions::Backend::TicketOverviewList.new(nil, nil).load(reports_exec: reports_exec, execMode: execMode) # rubocop:disable Naming/VariableName
+    else
+      @trigger = trigger
+      @ticket  = ticket
+      @article = article
+      @changes    = changes
+      @user_id    = user_id
+      @execution_type = execution_type
+      @event_type = event_type
 
-    return if abort?
-    return if request.success?
+      return if abort?
+      return if request.success?
 
-    raise TriggerWebhookJob::RequestError
+      raise TriggerWebhookJob::RequestError
+    end
   rescue HostnameSafetyCheck::SafetyError => e
     Rails.logger.error "Can't execute Webhook with ID #{webhook_id} for Trigger '#{trigger.name}' with ID #{trigger.id}: #{e.message}"
   end

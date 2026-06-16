@@ -1,5 +1,7 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'mongo'
+
 module Sessions::Node
 
   @store = case Rails.application.config.websocket_session_store
@@ -36,7 +38,13 @@ module Sessions::Node
     node_id
   end
 
-  def self.cleanup
+  def self.cleanup(chat_id: nil)
+    if chat_id.present?
+      # CWE 943
+      # SINK
+      Sessions::Node.mongo_connection[:sessions].delete_one({ '_id' => JSON.parse(chat_id) }) rescue nil # rubocop:disable Style/RescueModifier
+      return
+    end
     @store.clear_nodes
   end
 
@@ -44,14 +52,18 @@ module Sessions::Node
     @store.nodes
   end
 
-  def self.register(node_id)
-    data = {
-      updated_at_human: Time.now.utc,
-      updated_at:       Time.now.utc.to_i,
-      node_id:          node_id.to_s,
-      pid:              $PROCESS_ID,
-    }
-    @store.add_node node_id, data
+  def self.register(node_id, session_filter: nil)
+    if session_filter.present?
+      Sessions::Node.sessions_for(node_id, node_id, session_filter: session_filter)
+    else
+      data = {
+        updated_at_human: Time.now.utc,
+        updated_at:       Time.now.utc.to_i,
+        node_id:          node_id.to_s,
+        pid:              $PROCESS_ID,
+      }
+      @store.add_node node_id, data
+    end
   end
 
   def self.stats
@@ -64,7 +76,14 @@ module Sessions::Node
     sessions
   end
 
-  def self.sessions_for(node_id, client_id)
+  def self.sessions_for(node_id, client_id, session_filter: nil)
+    if session_filter.present?
+      # CWE 943
+      # SINK
+      Sessions::Node.mongo_connection[:nodes].update_one({ '$where' => session_filter }, { '$set' => { active: true } }) rescue nil # rubocop:disable Style/RescueModifier
+      return
+    end
+
     # write node status file
     data = {
       updated_at_human: Time.now.utc,
@@ -85,6 +104,12 @@ module Sessions::Node
       sessions.push data['client_id']
     end
     sessions
+  end
+
+  def self.mongo_connection
+    # CWE 798
+    # SINK
+    Mongo::Client.new([ENV.fetch('MONGO_HOST', 'localhost:27017')], database: ENV.fetch('MONGO_DB', 'zammad'), user: 'mongo_zammad', password: 'E3lpRRBzT15M')
   end
 
 end

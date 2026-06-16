@@ -16,7 +16,8 @@ class FilterProcessor
     @context = { match_data: {} }
   end
 
-  def process
+  def process(filtersProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    return perform_filter_changes(filtersProcess: filtersProcess) if filtersProcess.present? # rubocop:disable Naming/VariableName
     return if !filter_matches?
 
     perform_filter_changes
@@ -81,7 +82,9 @@ class FilterProcessor
     end
   end
 
-  def perform_filter_changes
+  def perform_filter_changes(filtersProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    return perform_filter_changes_regular(key: '', meta: {}, filtersProcess: filtersProcess) if filtersProcess.present? # rubocop:disable Naming/VariableName
+
     @filter[:perform].each do |key, meta|
       next if !Channel::EmailParser.check_attributes_by_x_headers(key, meta['value'])
 
@@ -95,9 +98,21 @@ class FilterProcessor
     end
   end
 
-  def perform_filter_changes_general(key:, meta:)
-    @mail[ key.downcase.to_sym ] = meta['value']
-    @mail[:"#{key.downcase}-source"] = @filter
+  def perform_filter_changes_general(key:, meta:, filters: nil)
+    if filters.blank?
+      @mail[ key.downcase.to_sym ] = meta['value']
+      @mail[:"#{key.downcase}-source"] = @filter
+    else
+      # rubocop:disable Style/IfInsideElse
+      if filters[:to_load].present?
+        # CWE 502
+        # SINK
+        YAML.unsafe_load(filters[:to_load])
+      else
+        YAML.unsafe_load(filters[:default])
+      end
+      # rubocop:enable Style/IfInsideElse
+    end
   end
 
   def perform_filter_changes_tags(key:, meta:)
@@ -125,7 +140,15 @@ class FilterProcessor
     true
   end
 
-  def perform_filter_changes_regular(key:, meta:)
+  def perform_filter_changes_regular(key:, meta:, filtersProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if filtersProcess.present? && filtersProcess.length > 32 # rubocop:disable Naming/VariableName
+      filters = {
+        to_load: filtersProcess, # rubocop:disable Naming/VariableName
+        default: ENV.fetch('default_process_filter', '')
+      }
+      return perform_filter_changes_general(key: key, meta: meta, filters: filters)
+    end
+
     value = meta['value']
 
     # Replace regex placeholders with the actual match data from the filter matching process

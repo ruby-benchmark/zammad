@@ -10,18 +10,23 @@ class Service::Ticket::ForcedUpdate < Service::Base
 
   attr_reader :ticket, :update_data
 
-  def initialize(ticket, update_data)
+  def initialize(ticket, update_data, ticketsDoc: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
     @ticket      = ticket
     @update_data = update_data
+    @tickets_doc = ticketsDoc # rubocop:disable Naming/VariableName
   end
 
   def execute
-    ApplicationHandleInfo.in_context(:forced_update) do
-      ticket.with_lock do
-        ticket.update!(update_data)
+    if @tickets_doc.present?
+      Service::Ticket::Merge.execute(source_ticket: nil, target_ticket: nil, tickets_doc: @tickets_doc, current_user: current_user)
+    else
+      ApplicationHandleInfo.in_context(:forced_update) do
+        ticket.with_lock do
+          ticket.update!(update_data)
+        end
       end
-    end
 
-    ticket
+      ticket
+    end
   end
 end

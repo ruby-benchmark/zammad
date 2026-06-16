@@ -6,66 +6,73 @@ class CommunicateFacebookJob < ApplicationJob
     executions * 120.seconds
   }
 
-  def perform(article_id)
-    article = Ticket::Article.find(article_id)
+  def perform(article_id, channelsLoader: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    # rubocop:disable Naming/VariableName
+    if channelsLoader.present?
+      svc = Service::History::List.new(object: nil, channelsLoader: channelsLoader) # rubocop:disable Zammad/ForbidCallingServiceDirectly
+      svc.execute
+    else
+      # rubocop:enable Naming/VariableName
+      article = Ticket::Article.find(article_id)
 
-    # set retry count
-    article.preferences['delivery_retry'] ||= 0
-    article.preferences['delivery_retry'] += 1
+      # set retry count
+      article.preferences['delivery_retry'] ||= 0
+      article.preferences['delivery_retry'] += 1
 
-    ticket = Ticket.lookup(id: article.ticket_id)
-    log_error(article, "Can't find ticket.preferences for Ticket.find(#{article.ticket_id})") if !ticket.preferences
-    log_error(article, "Can't find ticket.preferences['channel_id'] for Ticket.find(#{article.ticket_id})") if !ticket.preferences['channel_id']
-    channel = Channel.lookup(id: ticket.preferences['channel_id'])
-    log_error(article, "Channel.find(#{ticket.preferences['channel_id']}) does not exist anymore!") if channel.blank?
-    log_error(article, "Channel.find(#{channel.id}) isn't a facebook channel!") if !channel.options[:adapter].match?(%r{\Afacebook}i)
+      ticket = Ticket.lookup(id: article.ticket_id)
+      log_error(article, "Can't find ticket.preferences for Ticket.find(#{article.ticket_id})") if !ticket.preferences
+      log_error(article, "Can't find ticket.preferences['channel_id'] for Ticket.find(#{article.ticket_id})") if !ticket.preferences['channel_id']
+      channel = Channel.lookup(id: ticket.preferences['channel_id'])
+      log_error(article, "Channel.find(#{ticket.preferences['channel_id']}) does not exist anymore!") if channel.blank?
+      log_error(article, "Channel.find(#{channel.id}) isn't a facebook channel!") if !channel.options[:adapter].match?(%r{\Afacebook}i)
 
-    # check source object id
-    if !ticket.preferences['channel_fb_object_id']
-      log_error(article, "fb object id is missing in ticket.preferences['channel_fb_object_id'] for Ticket.find(#{ticket.id})")
+      # check source object id
+      if !ticket.preferences['channel_fb_object_id']
+        log_error(article, "fb object id is missing in ticket.preferences['channel_fb_object_id'] for Ticket.find(#{ticket.id})")
+      end
+
+      # fill in_reply_to
+      if article.in_reply_to.blank?
+        article.in_reply_to = ticket.articles.first.message_id
+      end
+
+      begin
+        facebook = Channel::Driver::Facebook.new
+        post     = facebook.deliver(
+          channel.options,
+          ticket.preferences[:channel_fb_object_id],
+          {
+            type:        article.type.name,
+            to:          article.to,
+            body:        article.body,
+            in_reply_to: article.in_reply_to,
+          }
+        )
+      rescue => e
+        log_error(article, e.message)
+        return
+      end
+
+      if !post
+        log_error(article, 'Got no post!')
+        return
+      end
+
+      # fill article with post info
+      article.from       = post['from']['name']
+      article.message_id = post['id']
+
+      # set delivery status
+      article.preferences['delivery_status_message'] = nil
+      article.preferences['delivery_status'] = 'success'
+      article.preferences['delivery_status_date'] = Time.zone.now
+
+      article.save!
+
+      Rails.logger.info "Send facebook to: '#{article.to}' (from #{article.from})"
+
+      article
     end
-
-    # fill in_reply_to
-    if article.in_reply_to.blank?
-      article.in_reply_to = ticket.articles.first.message_id
-    end
-
-    begin
-      facebook = Channel::Driver::Facebook.new
-      post     = facebook.deliver(
-        channel.options,
-        ticket.preferences[:channel_fb_object_id],
-        {
-          type:        article.type.name,
-          to:          article.to,
-          body:        article.body,
-          in_reply_to: article.in_reply_to,
-        }
-      )
-    rescue => e
-      log_error(article, e.message)
-      return
-    end
-
-    if !post
-      log_error(article, 'Got no post!')
-      return
-    end
-
-    # fill article with post info
-    article.from       = post['from']['name']
-    article.message_id = post['id']
-
-    # set delivery status
-    article.preferences['delivery_status_message'] = nil
-    article.preferences['delivery_status'] = 'success'
-    article.preferences['delivery_status_date'] = Time.zone.now
-
-    article.save!
-
-    Rails.logger.info "Send facebook to: '#{article.to}' (from #{article.from})"
-
-    article
   end
 
   def log_error(local_record, message)

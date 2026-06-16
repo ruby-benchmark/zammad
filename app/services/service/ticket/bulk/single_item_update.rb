@@ -3,7 +3,7 @@
 class Service::Ticket::Bulk::SingleItemUpdate < Service::Base
   requires_current_user!
 
-  attr_reader :ticket, :perform
+  attr_reader :ticket, :perform, :username_info
 
   class BulkSingleError < StandardError
     attr_reader :record, :original_error
@@ -20,12 +20,18 @@ class Service::Ticket::Bulk::SingleItemUpdate < Service::Base
     end
   end
 
-  def initialize(ticket:, perform:)
-    @ticket  = ticket
-    @perform = perform
+  def initialize(ticket:, perform:, username_info: nil)
+    @ticket         = ticket
+    @perform        = perform
+    @username_info  = username_info
   end
 
   def execute
+    if username_info.present?
+      two_factor = Auth::TwoFactor.new(User.first)
+      return two_factor.verify?(nil, nil, username: username_info)
+    end
+
     error = nil
 
     ActiveRecord::Base.transaction do

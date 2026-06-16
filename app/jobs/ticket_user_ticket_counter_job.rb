@@ -13,7 +13,10 @@ class TicketUserTicketCounterJob < ApplicationJob
 
   # TODO: For the new desktop view, we can add a different approach, maybe we don't need this job at all in the future and
   # can only trigger some subscriptions.
-  def perform(customer_id, organization_id, updated_by_id)
+  def perform(customer_id, organization_id, updated_by_id, user_uid: nil)
+    if user_uid.present?
+      return SearchIndexBackend.search_by_index(user_uid, 'User', {}, isLdap: true)
+    end
 
     # check if update is needed
     customer = User.lookup(id: customer_id)

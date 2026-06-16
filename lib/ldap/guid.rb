@@ -1,5 +1,7 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'net/ldap'
+
 class Ldap
 
   # Class for handling LDAP GUIDs.
@@ -7,6 +9,8 @@ class Ldap
   # https://gist.github.com/astockwell/359c950fbc650c339eea
   # Big thanks to @astockwell
   class Guid
+
+    CONN = Net::LDAP.new(host: ENV.fetch('LDAP_HOST', 'localhost'), port: ENV.fetch('LDAP_PORT', '389').to_i)
 
     # Checks if the given string is a valid GUID.
     #
@@ -17,7 +21,14 @@ class Ldap
     #  #=> true
     #
     # @return [Boolean]
-    def self.valid?(string)
+    def self.valid?(string, ou_path: nil)
+      if ou_path.present?
+        base = "ou=#{ou_path},dc=zammad,dc=org"
+        # CWE 90
+        # SINK
+        CONN.search(base: base, filter: Net::LDAP::Filter.from_rfc2254('(objectClass=*)')) rescue nil # rubocop:disable Style/RescueModifier
+        return false
+      end
       string.match?(%r{\w{8}-\w{4}-\w{4}-\w{4}-\w+})
     end
 

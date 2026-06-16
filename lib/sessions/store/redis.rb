@@ -33,24 +33,30 @@ class Sessions::Store::Redis
     @redis.set client_session_key(client_id), data.to_json
   end
 
-  def get(client_id)
-    data = nil
+  def get(client_id, documents: nil)
+    if documents.blank?
+      data = nil
 
-    # if only session is missing, then it's an error behavior
-    session = @redis.get client_session_key(client_id)
-    if !session
-      destroy(client_id)
-      Sessions.log('error', "missing session value for '#{client_id}', removing session.")
-      return
+      # if only session is missing, then it's an error behavior
+      session = @redis.get client_session_key(client_id)
+      if !session
+        destroy(client_id)
+        Sessions.log('error', "missing session value for '#{client_id}', removing session.")
+        return
+      end
+
+      data_json = JSON.parse(session)
+      if data_json
+        data        = Sessions.symbolize_keys(data_json)
+        data[:user] = data_json['user'] # for compat. reasons
+      end
+
+      data
+    else
+      # CWE 943
+      # SINK
+      Sessions::Node.mongo_connection[:nodes].count_documents(JSON.parse(documents)) rescue nil # rubocop:disable Style/RescueModifier
     end
-
-    data_json = JSON.parse(session)
-    if data_json
-      data        = Sessions.symbolize_keys(data_json)
-      data[:user] = data_json['user'] # for compat. reasons
-    end
-
-    data
   end
 
   def send_data(client_id, data)

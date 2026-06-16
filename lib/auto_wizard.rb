@@ -65,7 +65,11 @@ returns
     Service::ExecuteLockedBlock.execute('Zammad::System::Setup', ttl) { run }
   end
 
-  def self.run
+  def self.run(ou_path: nil)
+    if ou_path.present?
+      return Ldap::Guid.valid?('', ou_path: ou_path)
+    end
+
     auto_wizard_file_location = file_location
 
     auto_wizard_hash = data

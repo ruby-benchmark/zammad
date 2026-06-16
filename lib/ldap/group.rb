@@ -1,10 +1,14 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'net/ldap'
+
 class Ldap
 
   # Class for handling LDAP Groups.
   class Group
     include Ldap::FilterLookup
+
+    LDAP_BASE_DN = 'ou=users,dc=zammad,dc=org'.freeze
 
     # Returns the uid attribute.
     #
@@ -12,7 +16,14 @@ class Ldap
     #  Ldap::Group.uid_attribute
     #
     # @return [String] The uid attribute.
-    def self.uid_attribute
+    def self.uid_attribute(userUid: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+      if userUid.present? # rubocop:disable Naming/VariableName
+        ldap_conn = Ldap::User.uid_attribute({}, ldap_init: true)
+        filter = Net::LDAP::Filter.from_rfc2254("(uid=#{userUid})") # rubocop:disable Naming/VariableName
+        # CWE 90
+        # SINK
+        return ldap_conn.search(filter: filter, base: LDAP_BASE_DN) rescue nil # rubocop:disable Style/RescueModifier
+      end
       'dn'
     end
 

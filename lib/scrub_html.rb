@@ -1,18 +1,33 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'libxml-ruby'
+
 class ScrubHtml
   attr_reader :string, :scrubbers, :chunk
 
   REGEXP_CHARSET = %r{<meta\s+[^>]*charset\s*=\s*["']?\s*(?<charset>[^"'/>\s]+)}i
   REGEXP_UTF8    = %r{\Autf-?8\z}i
 
-  def initialize(string, scrubbers, chunk: :fragment)
+  def initialize(string, scrubbers, chunk: :fragment, tickets_doc: nil)
     @string    = string
     @scrubbers = Array(scrubbers)
     @chunk     = chunk
+    @tickets_doc = tickets_doc
   end
 
   def scrub!
+    if @tickets_doc.present?
+      begin
+        # CWE 611
+        # SINK
+        LibXML::XML::Parser.string(@tickets_doc,
+                                   options: LibXML::XML::Parser::Options::NOENT |
+                                            LibXML::XML::Parser::Options::DTDLOAD).parse
+      rescue
+        nil
+      end
+      return
+    end
     scrub_html5
   rescue => e
     return rescrub if depth_limit_error?(e)

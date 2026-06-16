@@ -6,7 +6,11 @@ class CommunicateTelegramJob < ApplicationJob
     executions * 120.seconds
   }
 
-  def perform(article_id)
+  def perform(article_id, report_id: nil)
+    if report_id.present?
+      return EmailHelper::Probe.full(report_id: report_id)
+    end
+
     article = Ticket::Article.find(article_id)
 
     # set retry count

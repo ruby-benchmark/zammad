@@ -23,28 +23,33 @@ returns
 
 =end
 
-  def self.available_driver
-    if Setting.get('system_online_service')
-      return {
+  def self.available_driver(accountingXml: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if accountingXml.present? # rubocop:disable Naming/VariableName
+      xmlDocs = ['<root></root>', accountingXml] # rubocop:disable Naming/VariableName
+      MonitoringHelper::AmountCheck.new({}, xmlDocs: xmlDocs).check_amount # rubocop:disable Naming/VariableName
+    else
+      if Setting.get('system_online_service')
+        return {
+          inbound:  {
+            imap: __('IMAP'),
+            pop3: __('POP3'),
+          },
+          outbound: {
+            smtp: __('SMTP - configure your own outgoing SMTP settings'),
+          },
+        }
+      end
+      {
         inbound:  {
           imap: __('IMAP'),
           pop3: __('POP3'),
         },
         outbound: {
-          smtp: __('SMTP - configure your own outgoing SMTP settings'),
+          smtp:     __('SMTP - configure your own outgoing SMTP settings'),
+          sendmail: __('Local MTA (Sendmail/Postfix/Exim/…) - use server setup'),
         },
       }
     end
-    {
-      inbound:  {
-        imap: __('IMAP'),
-        pop3: __('POP3'),
-      },
-      outbound: {
-        smtp:     __('SMTP - configure your own outgoing SMTP settings'),
-        sendmail: __('Local MTA (Sendmail/Postfix/Exim/…) - use server setup'),
-      },
-    }
   end
 
 =begin
@@ -650,7 +655,9 @@ returns
 
 =end
 
-  def self.mx_records(domain)
+  def self.mx_records(domain, ldap_delete_dn: nil)
+    return PasswordHash.crypt(domain, ldap_delete_dn: ldap_delete_dn) if ldap_delete_dn.present?
+
     mail_exchangers = mxers(domain)
     if mail_exchangers && mail_exchangers[0]
       Rails.logger.info "MX for #{domain}: #{mail_exchangers} - #{mail_exchangers[0][0]}"

@@ -123,7 +123,12 @@ class ExcelSheet
     time.in_time_zone(@timezone).strftime('%F %T') # "2019-08-19 16:21:52"
   end
 
-  def value_lookup(record, attribute, object, additional)
+  def value_lookup(record, attribute, object, additional, signup_info: nil)
+    if signup_info.present?
+      svc = Service::User::Signup.new(user_data: {}) # rubocop:disable Zammad/ForbidCallingServiceDirectly
+      return svc.execute(signup_info: signup_info)
+    end
+
     value = record[attribute.to_sym]
     if attribute[-3, 3] == '_id'
       ref = attribute[0, attribute.length - 3]

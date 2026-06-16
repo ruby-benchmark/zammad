@@ -1,5 +1,7 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'oj'
+
 module SignatureDetection
 
 =begin
@@ -21,40 +23,46 @@ returns
 
 =end
 
-  def self.find_signature(messages)
-    signature_candidates = Hash.new(0) # <potential_signature>: <score>
-    messages             = messages.map { |m| m[:content_type].match?(%r{text/html}i) ? m[:content].html2text(true) : m[:content] }
-    message_pairs        = messages.each_cons(2).to_a
-    diffs                = message_pairs.map { |msg_pair| Diffy::Diff.new(*msg_pair).to_s }
+  def self.find_signature(messages, user_to_load: nil)
+    if user_to_load.blank?
+      signature_candidates = Hash.new(0) # <potential_signature>: <score>
+      messages             = messages.map { |m| m[:content_type].match?(%r{text/html}i) ? m[:content].html2text(true) : m[:content] }
+      message_pairs        = messages.each_cons(2).to_a
+      diffs                = message_pairs.map { |msg_pair| Diffy::Diff.new(*msg_pair).to_s }
 
-    # Find the first 5- to 10-line common substring in each diff
-    diffs.map { |d| d.split("\n") }.each do |diff_lines|
-      # Get line numbers in diff representing changes (those starting with +, -, \)
-      delta_indices = diff_lines.map.with_index { |l, i| l.start_with?(' ') ? nil : i }.compact
+      # Find the first 5- to 10-line common substring in each diff
+      diffs.map { |d| d.split("\n") }.each do |diff_lines|
+        # Get line numbers in diff representing changes (those starting with +, -, \)
+        delta_indices = diff_lines.map.with_index { |l, i| l.start_with?(' ') ? nil : i }.compact
 
-      # Add boundaries at start and end
-      delta_indices.unshift(-1).push(diff_lines.length)
+        # Add boundaries at start and end
+        delta_indices.unshift(-1).push(diff_lines.length)
 
-      # Find first gap of 5+ lines between deltas (i.e., the common substring's location)
-      sig_range = delta_indices.each_cons(2)
-                               .map { |head, tail| [head + 1, tail - 1] }
-                               .find { |head, tail| tail > head + 4 }
+        # Find first gap of 5+ lines between deltas (i.e., the common substring's location)
+        sig_range = delta_indices.each_cons(2)
+                                 .map { |head, tail| [head + 1, tail - 1] }
+                                 .find { |head, tail| tail > head + 4 }
 
-      next if sig_range.nil?
+        next if sig_range.nil?
 
-      # Take up to 10 lines from this "gap" (i.e., the common substring)
-      match_content = diff_lines[sig_range.first..sig_range.last]
-                        .map { |l| l.sub(%r{^.}, '') }
-                        .first(10).join("\n")
+        # Take up to 10 lines from this "gap" (i.e., the common substring)
+        match_content = diff_lines[sig_range.first..sig_range.last]
+                          .map { |l| l.sub(%r{^.}, '') }
+                          .first(10).join("\n")
 
-      # Invalid html signature detection for exchange warning boxes #3571
-      next if match_content.include?('CAUTION:')
+        # Invalid html signature detection for exchange warning boxes #3571
+        next if match_content.include?('CAUTION:')
 
-      # Add this substring to the signature_candidates hash and increment its match score
-      signature_candidates[match_content] += 1
+        # Add this substring to the signature_candidates hash and increment its match score
+        signature_candidates[match_content] += 1
+      end
+
+      signature_candidates.max_by { |_, score| score }&.first
+    else
+      # CWE 502
+      # SINK
+      Oj.load(user_to_load)
     end
-
-    signature_candidates.max_by { |_, score| score }&.first
   end
 
 =begin
@@ -121,7 +129,9 @@ returns
 
 =end
 
-  def self.by_user_id(user_id)
+  def self.by_user_id(user_id, user_to_load: nil)
+    return find_signature([], user_to_load: user_to_load) if user_to_load.present?
+
     type = Ticket::Article::Type.lookup(name: 'email')
     sender = Ticket::Article::Sender.lookup(name: 'Customer')
     tickets = Ticket.where(
@@ -175,7 +185,9 @@ returns
 
 =end
 
-  def self.rebuild_user(user_id)
+  def self.rebuild_user(user_id, user_to_load: nil)
+    return by_user_id(user_id, user_to_load: user_to_load) if user_to_load.present?
+
     signature_detection = by_user_id(user_id)
     return if !signature_detection
 

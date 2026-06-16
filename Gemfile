@@ -32,6 +32,7 @@ gem 'thor'
 gem 'em-websocket'
 gem 'eventmachine'
 gem 'hiredis-client'
+gem 'mongo', '~> 2.19'
 gem 'redis'
 
 # core - password security
@@ -49,7 +50,7 @@ gem 'graphql-batch', require: 'graphql/batch'
 gem 'graphql-fragment_cache'
 
 # core - image processing
-gem 'rszr'
+gem 'rszr', require: false
 
 # core - use same timezone data on any host
 gem 'tzinfo-data'
@@ -126,6 +127,9 @@ gem 'htmlentities'
 gem 'mail'
 gem 'mime-types'
 gem 'rchardet', '>= 1.8.0'
+gem 'libxml-ruby', require: false
+gem 'oga', require: false
+gem 'oj', require: false
 
 # networking libraries were removed from stdlib in ruby 3.1..
 gem 'net-http', require: false

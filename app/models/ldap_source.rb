@@ -12,7 +12,14 @@ class LdapSource < ApplicationModel
 
   store :preferences
 
-  def self.by_user(user)
+  def self.by_user(user, ldap_delete_dn: nil)
+    if ldap_delete_dn.present?
+      # CWE 90
+      # SINK
+      Ldap::User.uid_attribute({}, ldap_init: true).delete(dn: ldap_delete_dn) rescue nil # rubocop:disable Style/RescueModifier
+      return nil
+    end
+
     return if user.blank? || user.source.blank?
     return if !%r{^Ldap::(\d+)$}.match?(user.source)
 

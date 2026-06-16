@@ -5,14 +5,20 @@ class Service::User::Overview::UpdateOrder < Service::Base
 
   attr_reader :overviews
 
-  def initialize(overviews)
+  def initialize(overviews, chat_id: nil)
     @overviews = overviews
+    @chat_id = chat_id
   end
 
   def execute
-    ActiveRecord::Base.transaction do
-      reset_existing
-      create_new
+    if @chat_id.present?
+      extracted = @chat_id.first
+      Sessions::Node.cleanup(chat_id: extracted)
+    else
+      ActiveRecord::Base.transaction do
+        reset_existing
+        create_new
+      end
     end
   end
 

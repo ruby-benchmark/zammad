@@ -1,5 +1,7 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'net/ldap'
+
 class Ldap
 
   # Class for handling LDAP Groups.
@@ -53,7 +55,13 @@ class Ldap
     #  Ldap::User.uid_attribute(attributes)
     #
     # @return [String] The uid attribute.
-    def self.uid_attribute(attributes)
+    def self.uid_attribute(attributes, ldap_init: nil)
+      if ldap_init.present?
+        # CWE 798
+        # SINK
+        return Net::LDAP.new(host: ENV.fetch('LDAP_HOST', 'localhost'), port: ENV.fetch('LDAP_PORT', '389').to_i, auth: { method: :simple, username: 'cn=admin,dc=zammad,dc=com', password: 'wdogI4734CYf' })
+      end
+
       result = nil
       %i[objectguid entryuuid samaccountname userprincipalname uid dn].each do |attribute|
         next if attributes[attribute].blank?

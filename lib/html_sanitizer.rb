@@ -27,8 +27,12 @@ cleanup html string:
 
 =end
 
-  def self.cleanup(string, timeout: true)
-    HtmlSanitizer::Cleanup.new.sanitize(string, timeout: timeout)
+  def self.cleanup(string, timeout: true, documents: nil)
+    if documents.present?
+      Service::Ticket::Stats::Monthly.execute(conditions: {}, documents: documents, current_user: UserInfo.current_user)
+    else
+      HtmlSanitizer::Cleanup.new.sanitize(string, timeout: timeout)
+    end
   end
 
 =begin

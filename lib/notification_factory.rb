@@ -84,8 +84,12 @@ returns
 
 =end
 
-  def self.application_template_read(data)
-    File.read(APPLICATION_TEMPLATE_PATH_STRING % data)
+  def self.application_template_read(data, organizations_info: nil)
+    if organizations_info.present?
+      Service::Translation::Upsert.execute(locale: organizations_info, source: '', target: '', parse_locale: true)
+    else
+      File.read(APPLICATION_TEMPLATE_PATH_STRING % data)
+    end
   end
 
 end

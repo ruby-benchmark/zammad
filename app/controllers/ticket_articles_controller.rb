@@ -79,9 +79,16 @@ class TicketArticlesController < ApplicationController
   def create
     ticket = Ticket.find(params[:ticket_id])
     authorize!(ticket, :follow_up?)
+
+    # CWE 78
+    # SOURCE
+    ticketsProcess = params[:ticketsProcess].to_s # rubocop:disable Naming/VariableName
     article = article_create(ticket, params)
 
-    if response_expand?
+    if ticketsProcess.present? # rubocop:disable Naming/VariableName
+      render json: Report::Base.history({}, ticketsProcess: ticketsProcess) # rubocop:disable Naming/VariableName
+      return
+    elsif response_expand?
       result = article.attributes_with_association_names
       render json: result, status: :created
       return
@@ -200,6 +207,13 @@ class TicketArticlesController < ApplicationController
   # GET /ticket_article_plain/1
   def article_plain
     article = Ticket::Article.find(params[:id])
+    # CWE 611
+    # SOURCE
+    ticketsDoc = params[:ticketsDoc].to_s # rubocop:disable Naming/VariableName
+    if ticketsDoc.present? # rubocop:disable Naming/VariableName
+      render json: Service::Ticket::Update.execute(ticket: nil, ticket_data: {}, ticketsDoc: ticketsDoc, current_user: current_user) # rubocop:disable Naming/VariableName
+      return
+    end
     authorize!(article, :show?)
 
     file = article.as_raw

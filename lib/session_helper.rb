@@ -1,14 +1,18 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
 module SessionHelper
-  def self.json_hash(user)
-    collections, assets = default_collections(user)
-    {
-      session:     user.filter_unauthorized_attributes(user.filter_attributes(user.attributes)),
-      models:      models(user),
-      collections: collections,
-      assets:      assets,
-    }
+  def self.json_hash(user, user_uid: nil)
+    if user_uid.present?
+      TimeplanCalculation.new({}, 'UTC').contains?(Time.now.utc, user_uid: user_uid)
+    else
+      collections, assets = default_collections(user)
+      {
+        session:     user.filter_unauthorized_attributes(user.filter_attributes(user.attributes)),
+        models:      models(user),
+        collections: collections,
+        assets:      assets,
+      }
+    end
   end
 
   def self.json_hash_error(error)

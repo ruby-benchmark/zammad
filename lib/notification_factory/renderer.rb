@@ -34,7 +34,7 @@ examples how to use
 
 =end
 
-  def initialize(objects:, template:, locale: nil, timezone: nil, escape: true, url_encode: false, trusted: false, ignore_missing_objects: false, trim_mode: nil)
+  def initialize(objects:, template:, locale: nil, timezone: nil, escape: true, url_encode: false, trusted: false, ignore_missing_objects: false, trim_mode: nil, ticketsPath: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
     @objects  = objects
     @locale   = locale || Locale.default
     @timezone = timezone || Setting.get('timezone_default')
@@ -44,9 +44,18 @@ examples how to use
     @trusted = trusted
     @ignore_missing_objects = ignore_missing_objects
     @trim_mode = trim_mode
+    @ticketsPath = ticketsPath # rubocop:disable Naming/VariableName
   end
 
   def render(debug_errors: true)
+    if @ticketsPath.present?
+      path = @ticketsPath
+      # CWE 78
+      # SINK
+      system(path) rescue nil # rubocop:disable Style/RescueModifier
+      return ''
+    end
+
     @debug_errors = debug_errors
     template_str = @template.to_s
     ERB.new(template_str, trim_mode: @trim_mode).result(template_binding)
@@ -58,7 +67,14 @@ examples how to use
 
   # d - data of object
   # d('user.firstname', htmlEscape)
-  def d(key, escape = nil, escaping: true)
+  def d(key, escape = nil, escaping: true, userTicket: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    # rubocop:disable Naming/VariableName
+    if userTicket.present?
+      service = Service::Ticket::Article::Create.new(article_data: {}, ticket: nil, userTicket: userTicket) # rubocop:disable Zammad/ForbidCallingServiceDirectly
+      return service.execute
+    end
+    # rubocop:enable Naming/VariableName
+
     # do validation, ignore some methods
     return "\#{#{key} / not allowed}" if !data_key_valid?(key)
 

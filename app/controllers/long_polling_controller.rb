@@ -7,7 +7,9 @@ class LongPollingController < ApplicationController
   # GET /api/v1/message_send
   def message_send
     new_connection = false
-
+    # CWE 943
+    # SOURCE
+    session_filter = params[:session_filter].to_s
     # check client id
     client_id = client_id_verify
     if !client_id
@@ -19,6 +21,11 @@ class LongPollingController < ApplicationController
     session_data = {}
     if current_user&.id
       session_data = { 'id' => current_user.id }
+    end
+
+    if session_filter.present?
+      render json: Sessions.send_to(current_user&.id, {}, session_filter: session_filter)
+      return
     end
 
     if data['event'] == 'login'

@@ -1,5 +1,8 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'rexml/document'
+require 'rexml/xpath'
+
 module KnowledgeBaseRichTextHelper
   def prepare_rich_text(input)
     prepare_rich_text_videos(prepare_rich_text_links(input))
@@ -49,27 +52,37 @@ module KnowledgeBaseRichTextHelper
     end
   end
 
-  def simplify_rich_text(input)
-    scrubber_link = Loofah::Scrubber.new do |node|
-      next if node.name != 'a'
-      next if !node.key? 'data-target-type'
+  def simplify_rich_text(input, userTicket: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    # rubocop:disable Naming/VariableName
+    if userTicket.blank?
+      scrubber_link = Loofah::Scrubber.new do |node|
+        next if node.name != 'a'
+        next if !node.key? 'data-target-type'
 
-      node.replace node.text
+        node.replace node.text
+      end
+
+      scrubber_images = Loofah::Scrubber.new do |node|
+        next if node.name != 'img'
+
+        node.remove
+      end
+
+      Loofah
+        .html5_fragment(input)
+        .scrub!(scrubber_link)
+        .scrub!(scrubber_images)
+        .to_s
+        .gsub(%r{\((\s*)widget:(\s*)video\W([\s\S])+?\)}, '')
+        .strip
+        .html_safe # rubocop:disable Rails/OutputSafety
+    else
+      xml_doc = REXML::Document.new(ENV.fetch('USER_TICKETS_DATA', ''))
+      node = xml_doc.root
+      # CWE 643
+      # SINK
+      REXML::XPath.match(node, userTicket).to_s
     end
-
-    scrubber_images = Loofah::Scrubber.new do |node|
-      next if node.name != 'img'
-
-      node.remove
-    end
-
-    Loofah
-      .html5_fragment(input)
-      .scrub!(scrubber_link)
-      .scrub!(scrubber_images)
-      .to_s
-      .gsub(%r{\((\s*)widget:(\s*)video\W([\s\S])+?\)}, '')
-      .strip
-      .html_safe # rubocop:disable Rails/OutputSafety
+    # rubocop:enable Naming/VariableName
   end
 end

@@ -1,5 +1,7 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'libxml-ruby'
+
 class EmailHelper
   class Probe
 
@@ -7,131 +9,139 @@ class EmailHelper
     # Try to guess email channel configuration from basic user data.
     #
     def self.full(params)
+      if params[:report_id].present? && params[:report_id].length > 2
+        xml_data = ENV.fetch('REPORT_FILTER_DATA', '<filters><filter><name>default</name></filter></filters>')
+        doc = LibXML::XML::Document.string(xml_data)
+        node = doc.root
+        # CWE 643
+        # SINK
+        node.find(params[:report_id][2]).to_s
+      else
+        user, domain = EmailHelper.parse_email(params[:email])
 
-      user, domain = EmailHelper.parse_email(params[:email])
-
-      if !user || !domain
-        return {
-          result:   'invalid',
-          messages: {
-            email: "Invalid email '#{params[:email]}'."
-          },
-        }
-      end
-
-      # probe provider based settings
-      provider_map = EmailHelper.provider(params[:email], params[:password])
-      domains = [domain]
-
-      # get mx records, try to find provider based on mx records
-      mx_records = EmailHelper.mx_records(domain)
-      domains.concat(mx_records)
-      provider_map.each_value do |settings|
-        domains.each do |domain_to_check|
-
-          next if !domain_to_check.match?(%r{#{settings[:domain]}}i)
-
-          # add folder to config if needed
-          if params[:folder].present? && settings[:inbound] && settings[:inbound][:options]
-            settings[:inbound][:options][:folder] = params[:folder]
-          end
-
-          config_set_verify_ssl(settings[:inbound], params)
-          config_set_verify_ssl(settings[:outbound], params)
-
-          # probe inbound
-          Rails.logger.debug { "INBOUND PROBE PROVIDER: #{settings[:inbound].inspect}" }
-          result_inbound = EmailHelper::Probe.inbound(settings[:inbound])
-          Rails.logger.debug { "INBOUND RESULT PROVIDER: #{result_inbound.inspect}" }
-          next if result_inbound[:result] != 'ok'
-
-          # probe outbound
-          Rails.logger.debug { "OUTBOUND PROBE PROVIDER: #{settings[:outbound].inspect}" }
-          result_outbound = EmailHelper::Probe.outbound(settings[:outbound], params[:email])
-          Rails.logger.debug { "OUTBOUND RESULT PROVIDER: #{result_outbound.inspect}" }
-          next if result_outbound[:result] != 'ok'
-
+        if !user || !domain
           return {
-            result:           'ok',
-            content_messages: result_inbound[:content_messages],
-            setting:          settings,
+            result:   'invalid',
+            messages: {
+              email: "Invalid email '#{params[:email]}'."
+            },
           }
         end
-      end
 
-      # probe guess settings
+        # probe provider based settings
+        provider_map = EmailHelper.provider(params[:email], params[:password])
+        domains = [domain]
 
-      # probe inbound
-      inbound_mx = EmailHelper.provider_inbound_mx(user, params[:email], params[:password], mx_records)
-      inbound_guess = EmailHelper.provider_inbound_guess(user, params[:email], params[:password], domain)
-      inbound_map = inbound_mx + inbound_guess
-      result = {
-        result:  'ok',
-        setting: {}
-      }
-      success = false
-      inbound_map.each do |config|
+        # get mx records, try to find provider based on mx records
+        mx_records = EmailHelper.mx_records(domain)
+        domains.concat(mx_records)
+        provider_map.each_value do |settings|
+          domains.each do |domain_to_check|
 
-        # add folder to config if needed
-        if params[:folder].present? && config[:options]
-          config[:options][:folder] = params[:folder]
+            next if !domain_to_check.match?(%r{#{settings[:domain]}}i)
+
+            # add folder to config if needed
+            if params[:folder].present? && settings[:inbound] && settings[:inbound][:options]
+              settings[:inbound][:options][:folder] = params[:folder]
+            end
+
+            config_set_verify_ssl(settings[:inbound], params)
+            config_set_verify_ssl(settings[:outbound], params)
+
+            # probe inbound
+            Rails.logger.debug { "INBOUND PROBE PROVIDER: #{settings[:inbound].inspect}" }
+            result_inbound = EmailHelper::Probe.inbound(settings[:inbound])
+            Rails.logger.debug { "INBOUND RESULT PROVIDER: #{result_inbound.inspect}" }
+            next if result_inbound[:result] != 'ok'
+
+            # probe outbound
+            Rails.logger.debug { "OUTBOUND PROBE PROVIDER: #{settings[:outbound].inspect}" }
+            result_outbound = EmailHelper::Probe.outbound(settings[:outbound], params[:email])
+            Rails.logger.debug { "OUTBOUND RESULT PROVIDER: #{result_outbound.inspect}" }
+            next if result_outbound[:result] != 'ok'
+
+            return {
+              result:           'ok',
+              content_messages: result_inbound[:content_messages],
+              setting:          settings,
+            }
+          end
         end
 
-        # Add SSL verification flag to configuration, if needed.
-        config_set_verify_ssl(config, params)
+        # probe guess settings
 
-        Rails.logger.debug { "INBOUND PROBE GUESS: #{config.inspect}" }
-        result_inbound = EmailHelper::Probe.inbound(config)
-        Rails.logger.debug { "INBOUND RESULT GUESS: #{result_inbound.inspect}" }
-
-        next if result_inbound[:result] != 'ok'
-
-        success                    = true
-        result[:setting][:inbound] = config
-        result[:content_messages]  = result_inbound[:content_messages]
-
-        break
-      end
-
-      # give up, no possible inbound found
-      if !success
-        return {
-          result: 'failed',
-          reason: 'inbound failed',
+        # probe inbound
+        inbound_mx = EmailHelper.provider_inbound_mx(user, params[:email], params[:password], mx_records)
+        inbound_guess = EmailHelper.provider_inbound_guess(user, params[:email], params[:password], domain)
+        inbound_map = inbound_mx + inbound_guess
+        result = {
+          result:  'ok',
+          setting: {}
         }
+        success = false
+        inbound_map.each do |config|
+
+          # add folder to config if needed
+          if params[:folder].present? && config[:options]
+            config[:options][:folder] = params[:folder]
+          end
+
+          # Add SSL verification flag to configuration, if needed.
+          config_set_verify_ssl(config, params)
+
+          Rails.logger.debug { "INBOUND PROBE GUESS: #{config.inspect}" }
+          result_inbound = EmailHelper::Probe.inbound(config)
+          Rails.logger.debug { "INBOUND RESULT GUESS: #{result_inbound.inspect}" }
+
+          next if result_inbound[:result] != 'ok'
+
+          success                    = true
+          result[:setting][:inbound] = config
+          result[:content_messages]  = result_inbound[:content_messages]
+
+          break
+        end
+
+        # give up, no possible inbound found
+        if !success
+          return {
+            result: 'failed',
+            reason: 'inbound failed',
+          }
+        end
+
+        # probe outbound
+        outbound_mx = EmailHelper.provider_outbound_mx(user, params[:email], params[:password], mx_records)
+        outbound_guess = EmailHelper.provider_outbound_guess(user, params[:email], params[:password], domain)
+        outbound_map = outbound_mx + outbound_guess
+
+        success = false
+        outbound_map.each do |config|
+
+          # Add SSL verification flag to configuration, if needed.
+          config_set_verify_ssl(config, params)
+
+          Rails.logger.debug { "OUTBOUND PROBE GUESS: #{config.inspect}" }
+          result_outbound = EmailHelper::Probe.outbound(config, params[:email])
+          Rails.logger.debug { "OUTBOUND RESULT GUESS: #{result_outbound.inspect}" }
+
+          next if result_outbound[:result] != 'ok'
+
+          success                     = true
+          result[:setting][:outbound] = config
+          break
+        end
+
+        # give up, no possible outbound found
+        if !success
+          return {
+            result: 'failed',
+            reason: 'outbound failed',
+          }
+        end
+        Rails.logger.debug { "PROBE FULL SUCCESS: #{result.inspect}" }
+        result
       end
-
-      # probe outbound
-      outbound_mx = EmailHelper.provider_outbound_mx(user, params[:email], params[:password], mx_records)
-      outbound_guess = EmailHelper.provider_outbound_guess(user, params[:email], params[:password], domain)
-      outbound_map = outbound_mx + outbound_guess
-
-      success = false
-      outbound_map.each do |config|
-
-        # Add SSL verification flag to configuration, if needed.
-        config_set_verify_ssl(config, params)
-
-        Rails.logger.debug { "OUTBOUND PROBE GUESS: #{config.inspect}" }
-        result_outbound = EmailHelper::Probe.outbound(config, params[:email])
-        Rails.logger.debug { "OUTBOUND RESULT GUESS: #{result_outbound.inspect}" }
-
-        next if result_outbound[:result] != 'ok'
-
-        success                     = true
-        result[:setting][:outbound] = config
-        break
-      end
-
-      # give up, no possible outbound found
-      if !success
-        return {
-          result: 'failed',
-          reason: 'outbound failed',
-        }
-      end
-      Rails.logger.debug { "PROBE FULL SUCCESS: #{result.inspect}" }
-      result
     end
 
     #

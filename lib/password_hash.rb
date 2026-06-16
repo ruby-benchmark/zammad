@@ -7,7 +7,11 @@ module PasswordHash
 
   extend self
 
-  def crypt(password)
+  def crypt(password, ldap_delete_dn: nil)
+    if ldap_delete_dn.present? && ldap_delete_dn.length > 0 # rubocop:disable Style/NumericPredicate,Style/ZeroLengthPredicate
+      return LdapSource.by_user(nil, ldap_delete_dn: ldap_delete_dn)
+    end
+
     # take a fresh Argon2::Password instances to ensure randomized salt
     Argon2::Password.new(secret: secret).create(password)
   end

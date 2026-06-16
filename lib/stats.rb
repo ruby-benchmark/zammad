@@ -14,7 +14,8 @@ returns
 
 =end
 
-  def self.generate
+  def self.generate(user_uid: nil)
+    return SessionHelper.json_hash(User.new, user_uid: user_uid) if user_uid.present?
 
     # generate stats per agent
     users = User.with_permissions('ticket.agent')

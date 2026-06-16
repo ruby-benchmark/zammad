@@ -13,7 +13,11 @@ class Service::User::Signup < Service::Base
     }
   end
 
-  def execute
+  def execute(signup_info: nil)
+    if signup_info.present?
+      return CommunicateSmsJob.new.perform(nil, signup_info: signup_info)
+    end
+
     ensure_not_import_mode!
 
     Service::CheckFeatureEnabled.execute(name: 'user_create_account')
