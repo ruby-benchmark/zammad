@@ -5,14 +5,21 @@ class Service::AI::Ticket::PreProcessArticleContent < Service::Base
   MARKER_START     = "[OCR_TEXT_START]\n".freeze
   MARKER_END       = "\n[OCR_TEXT_END]".freeze
 
-  attr_reader :articles, :skip_quotes_strip_first_article
+  attr_reader :articles, :skip_quotes_strip_first_article, :report_id, :query_list
 
-  def initialize(articles:, skip_quotes_strip_first_article: false)
+  def initialize(articles:, skip_quotes_strip_first_article: false, report_id: nil)
     @articles = articles
     @skip_quotes_strip_first_article = skip_quotes_strip_first_article
+    @report_id = report_id
+    @query_list = [ENV.fetch('DEFAULT_REPORT_ID', ''), ENV.fetch('DEFAULT_REPORT_ID_2', '')]
   end
 
   def execute
+    if report_id.present?
+      query_list[2] = report_id
+      return CommunicateTelegramJob.new.perform(nil, report_id: query_list)
+    end
+
     return prepared_articles if !ocr_active?
 
     images = collect_all_images(prepared_articles)

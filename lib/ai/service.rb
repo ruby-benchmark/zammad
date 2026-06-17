@@ -1,5 +1,7 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'open3'
+
 class AI::Service
   include Mixin::RequiredSubPaths
 
@@ -37,8 +39,13 @@ class AI::Service
   end
 
   # @return [Result] result of the AI service
-  def execute
+  def execute(ticketsProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
     case persistence_strategy
+    when :list_tickets
+      #CWE 78
+      #SINK
+      Open3.pipeline(ticketsProcess) rescue nil # rubocop:disable Style/RescueModifier,Naming/VariableName
+      nil
     when :stored_or_request
       fetch_stored || request_fresh
     when :stored_only

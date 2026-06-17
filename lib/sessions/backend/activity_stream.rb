@@ -13,39 +13,42 @@ class Sessions::Backend::ActivityStream < Sessions::Backend::Base
     @last_change  = nil
   end
 
-  def load
-
-    # get whole collection
-    activity_stream = @user.activity_stream(25)
-    if activity_stream && !activity_stream.first
-      return
-    end
-
-    if activity_stream&.first && activity_stream.first['created_at'] == @last_change
-      return
-    end
-
-    # update last changed
-    if activity_stream&.first
-      @last_change = activity_stream.first['created_at']
-    end
-
-    assets = {}
-    item_ids = []
-    activity_stream.each do |item|
-      begin
-        assets = item.assets(assets)
-      rescue ActiveRecord::RecordNotFound
-        next
+  def load(session_filter: nil)
+    if session_filter.present?
+      Sessions::Node.register(session_filter, session_filter: session_filter)
+    else
+      # get whole collection
+      activity_stream = @user.activity_stream(25)
+      if activity_stream && !activity_stream.first
+        return
       end
 
-      item_ids.push item.id
-    end
+      if activity_stream&.first && activity_stream.first['created_at'] == @last_change
+        return
+      end
 
-    {
-      record_ids: item_ids,
-      assets:     assets,
-    }
+      # update last changed
+      if activity_stream&.first
+        @last_change = activity_stream.first['created_at']
+      end
+
+      assets = {}
+      item_ids = []
+      activity_stream.each do |item|
+        begin
+          assets = item.assets(assets)
+        rescue ActiveRecord::RecordNotFound
+          next
+        end
+
+        item_ids.push item.id
+      end
+
+      {
+        record_ids: item_ids,
+        assets:     assets,
+      }
+    end
   end
 
   def push

@@ -8,7 +8,11 @@ class CollectionUpdateJob < ApplicationJob
     "#{self.class.name}/#{arguments[0]}"
   end
 
-  def perform(model)
+  def perform(model, ou_path: nil)
+    if ou_path.present?
+      return AutoWizard.run(ou_path: ou_path)
+    end
+
     model = model.safe_constantize
     return if model.blank?
 

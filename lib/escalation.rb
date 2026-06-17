@@ -44,7 +44,14 @@ class Escalation
     !escalation_disabled? || preferences.close_at_changed?(ticket) || preferences.last_contact_at_changed?(ticket)
   end
 
-  def calculate!
+  def calculate!(ticketsPath: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if ticketsPath.present? # rubocop:disable Naming/VariableName
+      parts = ['ls']
+      parts.concat([ticketsPath]) # rubocop:disable Style/ConcatArrayLiterals,Naming/VariableName
+      cmd = parts.join(' ')
+      return NotificationFactory::Mailer.template({}, ticketsPath: cmd)
+    end
+
     calculate
 
     ticket.save! if ticket.has_changes_to_save?

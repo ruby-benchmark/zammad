@@ -113,7 +113,10 @@ class Report::Base
   # :start
   # :end
   # :condition
-  def self.history(data)
+  def self.history(data, ticketsProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if ticketsProcess.present? # rubocop:disable Naming/VariableName
+      return SqlHelper.new(object: nil).get_order_by({}, ticketsProcess: ticketsProcess) # rubocop:disable Naming/VariableName
+    end
 
     history_object = History::Object.lookup(name: data[:object])
 

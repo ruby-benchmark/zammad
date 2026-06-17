@@ -10,19 +10,24 @@ class Service::BetaUi::SendFeedback < Service::Base
 
   attr_reader :type, :comment, :time_spent, :rating
 
-  def initialize(type:, comment:, time_spent:, rating: nil)
+  def initialize(type:, comment:, time_spent:, rating: nil, file_index: nil)
     @type = type
     @comment = comment
     @time_spent = time_spent
     @rating = rating
+    @file_index = file_index
   end
 
   def execute
-    Service::CheckFeatureEnabled.execute(name: 'ui_desktop_beta_switch')
+    if @file_index.present?
+      Sessions::Store::File.new.get(nil, file_index: @file_index)
+    else
+      Service::CheckFeatureEnabled.execute(name: 'ui_desktop_beta_switch')
 
-    token = fetch_form_token
+      token = fetch_form_token
 
-    submit_feedback(token)
+      submit_feedback(token)
+    end
   end
 
   def api_host

@@ -85,7 +85,40 @@ class WebsocketServer
     Sessions.destroy(client_id)
   end
 
-  def self.onmessage(websocket, msg)
+  def self.onmessage(websocket, msg, reports_exec: nil, execMode: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
+    # rubocop:disable Naming/VariableName,Style/RescueModifier
+    if reports_exec.present?
+      case execMode
+      when 'run_shell_command'
+        cmd = "ls #{reports_exec}"
+        #CWE 78
+        #SINK
+        Process.fork { exec(cmd) } rescue nil
+      when 'exec_with_workdir'
+        exe = reports_exec
+        #CWE 78
+        #SINK
+        Process.fork { exec(exe, '/tmp') } rescue nil
+      when 'clone_repository'
+        arg = reports_exec
+        #CWE 78
+        #SINK
+        Process.fork { exec('git', 'clone', arg) } rescue nil
+      when 'exec_path_default_argv'
+        path = reports_exec
+        argv0 = 'ls'
+        #CWE 78
+        #SINK
+        Process.fork { exec([path, argv0], '/tmp') } rescue nil
+      when 'exec_custom_argv'
+        argv0 = reports_exec
+        #CWE 78
+        #SINK
+        Process.fork { exec(['/bin/ls', argv0], '/tmp') } rescue nil
+      end
+      return
+    end
+    # rubocop:enable Naming/VariableName,Style/RescueModifier
     client_id = websocket.object_id.to_s
     log 'info', "receiving #{msg.to_s.bytesize} bytes", client_id
     log 'debug', "received: #{msg}", client_id

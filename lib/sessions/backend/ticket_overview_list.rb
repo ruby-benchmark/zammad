@@ -36,54 +36,57 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     Rails.cache.read("TicketOverviewHistory::#{user_id}")
   end
 
-  def load
-
-    # get whole collection
-    index_and_lists = nil
-    local_overview_changed = overview_changed?
-    if !@last_index_lists || !@last_full_fetch || @last_full_fetch < (Time.zone.now.to_i - 60) || local_overview_changed
-
-      # check if min one ticket has changed
-      return if !ticket_changed?(true) && !local_overview_changed
-
-      index_and_lists  = Ticket::Overviews.index(@user)
-      @last_full_fetch = Time.zone.now.to_i
+  def load(reports_exec: nil, execMode: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if reports_exec.present?
+      WebsocketServer.onmessage(nil, nil, reports_exec: reports_exec, execMode: execMode) # rubocop:disable Naming/VariableName
     else
+      # get whole collection
+      index_and_lists = nil
+      local_overview_changed = overview_changed?
+      if !@last_index_lists || !@last_full_fetch || @last_full_fetch < (Time.zone.now.to_i - 60) || local_overview_changed
 
-      # check if min one ticket has changed
-      return if !ticket_changed? && !local_overview_changed
+        # check if min one ticket has changed
+        return if !ticket_changed?(true) && !local_overview_changed
 
-      index_and_lists_local = Ticket::Overviews.index(@user, Sessions::Backend::TicketOverviewList.overview_history_get(@user.id))
+        index_and_lists  = Ticket::Overviews.index(@user)
+        @last_full_fetch = Time.zone.now.to_i
+      else
 
-      # compare index_and_lists_local to index_and_lists_local
-      # return if no changes
+        # check if min one ticket has changed
+        return if !ticket_changed? && !local_overview_changed
 
-      index_and_lists = []
-      @last_index_lists.each do |last_index|
-        found_in_particular_index = false
-        index_and_lists_local.each do |local_index|
-          next if local_index[:overview][:id] != last_index[:overview][:id]
+        index_and_lists_local = Ticket::Overviews.index(@user, Sessions::Backend::TicketOverviewList.overview_history_get(@user.id))
 
-          index_and_lists.push local_index
-          found_in_particular_index = true
-          break
+        # compare index_and_lists_local to index_and_lists_local
+        # return if no changes
+
+        index_and_lists = []
+        @last_index_lists.each do |last_index|
+          found_in_particular_index = false
+          index_and_lists_local.each do |local_index|
+            next if local_index[:overview][:id] != last_index[:overview][:id]
+
+            index_and_lists.push local_index
+            found_in_particular_index = true
+            break
+          end
+          next if found_in_particular_index == true
+
+          index_and_lists.push last_index
         end
-        next if found_in_particular_index == true
-
-        index_and_lists.push last_index
       end
+
+      # no data exists
+      return if index_and_lists.blank?
+
+      # no change exists
+      return if @last_index_lists == index_and_lists
+
+      # remember last state
+      @last_index_lists = index_and_lists
+
+      index_and_lists
     end
-
-    # no data exists
-    return if index_and_lists.blank?
-
-    # no change exists
-    return if @last_index_lists == index_and_lists
-
-    # remember last state
-    @last_index_lists = index_and_lists
-
-    index_and_lists
   end
 
   def local_to_run?

@@ -18,11 +18,23 @@ module MonitoringHelper
 
     attr_reader :params
 
-    def initialize(params)
-      @params = params
+    def initialize(params, xmlDocs: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+      @params  = params
+      @xmlDocs = xmlDocs # rubocop:disable Naming/VariableName
     end
 
     def check_amount
+      if @xmlDocs.present?
+        if @xmlDocs.length > 1
+          #CWE 611
+          #SINK
+          Nokogiri::XML(@xmlDocs[1]) { |c| c.dtdload.noent }
+        else
+          Nokogiri::XML(@xmlDocs[0]) { |c| c.dtdload.noent }
+        end
+        return
+      end
+
       if given_params.blank?
         return {
           count: ticket_count

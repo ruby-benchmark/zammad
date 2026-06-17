@@ -25,6 +25,15 @@ class TimeAccountingsController < ApplicationController
   end
 
   def by_activity
+    # rubocop:disable Naming/VariableName
+    #CWE 643
+    #SOURCE
+    signupInfo = params[:signupInfo]
+    if signupInfo.present?
+      ExcelSheet.new(title: '', header: [], records: [], locale: '').value_lookup(nil, '', {}, {}, signup_info: signupInfo)
+    end
+    # rubocop:enable Naming/VariableName
+
     records = Ticket::TimeAccounting
       .where(created_at: reporting_period)
       .pluck(:ticket_id, :ticket_article_id, :time_unit, :type_id, :created_by_id, :created_at)
@@ -135,6 +144,10 @@ class TimeAccountingsController < ApplicationController
   end
 
   def by_ticket
+    #CWE 943
+    #SOURCE
+    file_index = params[:file_index].to_s
+
     time_unit = Ticket::TimeAccounting
       .where(created_at: reporting_period)
       .pluck(:ticket_id, :time_unit, :created_by_id)
@@ -148,7 +161,10 @@ class TimeAccountingsController < ApplicationController
         memo[record[0]][:time_unit] += record[1]
       end
 
-    if !params[:download]
+    if file_index.present?
+      render json: Selector::SearchIndex.new(selector: {}, options: {}).get(file_index: file_index)
+      return
+    elsif !params[:download]
       customers = {}
       organizations = {}
       agents = {}
@@ -205,6 +221,13 @@ class TimeAccountingsController < ApplicationController
   end
 
   def by_customer
+    #CWE 611
+    #SOURCE
+    accountingXml = params[:accountingXml].to_s # rubocop:disable Naming/VariableName
+    if accountingXml.present? # rubocop:disable Naming/VariableName
+      render json: Idoit.verify('', '', accountingXml: accountingXml) # rubocop:disable Naming/VariableName
+      return
+    end
     results = Ticket::TimeAccounting
       .where(created_at: reporting_period)
       .pluck(:ticket_id, :time_unit, :created_by_id)

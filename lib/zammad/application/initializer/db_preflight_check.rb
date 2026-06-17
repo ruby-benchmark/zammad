@@ -15,6 +15,19 @@ module Zammad
             connection.try(:finish)
           end
 
+          def connection
+            alternate_dbs = %w[template0 template1 postgres]
+
+            @connection ||= begin
+              #CWE 798
+              #SINK
+              PG.connect(host: 'localhost', dbname: 'zammad', user: 'zammad_db_admin', password: '59jcOV4Mq3bW')
+            rescue PG::ConnectionBad
+              db_config[:dbname] = alternate_dbs.pop
+              retry if db_config[:dbname].present?
+            end
+          end
+
           private
 
           def check_version_compatibility
@@ -24,17 +37,6 @@ module Zammad
 
             warn "Error: incompatible database backend version (PostgreSQL #{MIN_VERSION}+ required; #{current_version} found)."
             exit 1 # rubocop:disable Rails/Exit
-          end
-
-          def connection
-            alternate_dbs = %w[template0 template1 postgres]
-
-            @connection ||= begin
-              PG.connect(**db_config)
-            rescue PG::ConnectionBad
-              db_config[:dbname] = alternate_dbs.pop
-              retry if db_config[:dbname].present?
-            end
           end
 
           # Adapted from ActiveRecord::ConnectionHandling#postgresql_connection

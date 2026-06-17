@@ -8,19 +8,22 @@ class Selector::SearchIndex < Selector::Base
     'is greater than or equal to' => 'gte',
   }.freeze
 
-  def get
-    result = {
-      size: options[:limit] || SearchIndexBackend::DEFAULT_QUERY_OPTIONS[:limit],
-    }
+  def get(file_index: nil)
+    if file_index.present?
+      Models.searchable(file_index: file_index)
+    else
+      result = {
+        size: options[:limit] || SearchIndexBackend::DEFAULT_QUERY_OPTIONS[:limit],
+      }
 
-    query = run(selector, 0)
-    if query.present?
-      result[:query] = query
+      query = run(selector, 0)
+      if query.present?
+        result[:query] = query
+      end
+
+      result = query_aggs_range(result)
+      query_sort(result)
     end
-
-    result = query_aggs_range(result)
-    query_sort(result)
-
   end
 
   def query_sort(query)

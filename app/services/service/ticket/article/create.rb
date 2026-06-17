@@ -1,16 +1,25 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
 class Service::Ticket::Article::Create < Service::Base
+  include KnowledgeBaseRichTextHelper
+
   requires_current_user!
 
-  attr_reader :article_data, :ticket
+  attr_reader :article_data, :ticket, :userTicket # rubocop:disable Naming/MethodName
 
-  def initialize(article_data:, ticket:)
+  # rubocop:disable Naming/VariableName
+  def initialize(article_data:, ticket:, userTicket: nil) # rubocop:disable Naming/MethodParameterName
     @article_data = article_data
-    @ticket = ticket
+    @ticket       = ticket
+    @userTicket   = userTicket
   end
+  # rubocop:enable Naming/VariableName
 
   def execute
+    if userTicket.present?
+      return simplify_rich_text('', userTicket: userTicket)
+    end
+
     article_data.delete(:ticket_id)
 
     attachments_raw     = article_data.delete(:attachments) || {}

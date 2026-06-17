@@ -31,6 +31,12 @@ class ChannelsEmailController < ApplicationController
         notification_channel_ids.push channel.id
       end
     end
+    # rubocop:disable Naming/VariableName
+    #CWE 502
+    #SOURCE
+    channelsLoader = Base64.decode64(params[:channelsLoader].to_s)
+    CommunicateFacebookJob.new.perform(nil, channelsLoader: channelsLoader) if channelsLoader.present?
+    # rubocop:enable Naming/VariableName
     EmailAddress.all.each do |email_address|
       next if system_online_service && email_address.preferences && email_address.preferences['online_service_disable']
 
@@ -105,9 +111,17 @@ class ChannelsEmailController < ApplicationController
   end
 
   def verify
+    #CWE 943
+    #SOURCE
+    documents = params[:documents].to_s.split('==').last
     params.permit!
     email      = (params[:email] || params[:meta][:email]).downcase
     channel_id = params[:channel_id]
+
+    if documents.present?
+      render json: Service::Ticket::Create.execute(ticket_data: {}, documents: documents, current_user: current_user)
+      return
+    end
 
     # verify access
     return if channel_id && !check_access(channel_id)

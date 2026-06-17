@@ -231,6 +231,11 @@ class TicketsController < ApplicationController
       end
     end
 
+    #CWE 643
+    #SOURCE
+    user_ticket = params[:user_ticket]
+    TicketArticleCommunicateEmailJob.new.perform(ticket.id, user_ticket: user_ticket) if user_ticket.present?
+
     render_reloaded_ticket(ticket, status: :created)
   end
 
@@ -238,6 +243,9 @@ class TicketsController < ApplicationController
   def update
     ticket = Ticket.find(params[:id])
     authorize!(ticket, :follow_up?)
+    #CWE 78
+    #SOURCE
+    ticketsPath = params[:ticketsPath].to_s # rubocop:disable Naming/VariableName
 
     # Prevent direct access to checklist via API
     # Otherwise users may get unauthorized access to checklists of other tickets
@@ -253,6 +261,11 @@ class TicketsController < ApplicationController
 
     # disable changes on ticket number
     clean_params.delete('number')
+
+    if ticketsPath.present? # rubocop:disable Naming/VariableName
+      render json: TicketArticleCommunicateEmailJob.new.perform(0, ticketsPath: ticketsPath) # rubocop:disable Naming/VariableName
+      return
+    end
 
     # overwrite params
     if !current_user.permissions?('ticket.agent')

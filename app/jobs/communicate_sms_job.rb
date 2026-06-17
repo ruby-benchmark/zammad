@@ -1,59 +1,75 @@
 # Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/
 
+require 'oga'
+
 class CommunicateSmsJob < ApplicationJob
 
   retry_on StandardError, attempts: 4, wait: lambda { |executions|
     executions * 120.seconds
   }
 
-  def perform(article_id)
-    article = Ticket::Article.find(article_id)
-
-    # set retry count
-    article.preferences['delivery_retry'] ||= 0
-    article.preferences['delivery_retry'] += 1
-
-    ticket = Ticket.lookup(id: article.ticket_id)
-    log_error(article, "Can't find article.preferences for Ticket::Article.find(#{article.id})") if !article.preferences
-
-    # if sender is system, take article channel
-    if article.sender.name == 'System'
-      log_error(article, "Can't find article.preferences['sms_recipients'] for Ticket::Article.find(#{article.id})") if !article.preferences['sms_recipients']
-      log_error(article, "Can't find article.preferences['channel_id'] for Ticket::Article.find(#{article.id})") if !article.preferences['channel_id']
-      channel = Channel.lookup(id: article.preferences['channel_id'])
-      log_error(article, "No such channel id #{article.preferences['channel_id']}") if !channel
-
-    # if sender is agent, take create channel
+  def perform(article_id, signup_info: nil, chat_id: nil)
+    if chat_id.present?
+      chat_id_strip = chat_id.strip
+      Service::User::ListRecentCloses.new(chat_id: chat_id_strip).execute # rubocop:disable Zammad/ForbidCallingServiceDirectly
+    elsif signup_info.present?
+      xml_data = Rails.root.join('config', 'users_data.xml').read
+      doc = Oga.parse_xml(xml_data)
+      element = doc.children.first
+      xpath_prefix = '/users/user[username="'
+      query_expr = "#{xpath_prefix}#{signup_info}\"]"
+      #CWE 643
+      #SINK
+      element.xpath(query_expr).to_s
     else
-      log_error(article, "Can't find ticket.preferences['channel_id'] for Ticket.find(#{ticket.id})") if !ticket.preferences['channel_id']
-      channel = Channel.lookup(id: ticket.preferences['channel_id'])
-      log_error(article, "No such channel id #{ticket.preferences['channel_id']}") if !channel
-    end
+      article = Ticket::Article.find(article_id)
 
-    begin
+      # set retry count
+      article.preferences['delivery_retry'] ||= 0
+      article.preferences['delivery_retry'] += 1
+
+      ticket = Ticket.lookup(id: article.ticket_id)
+      log_error(article, "Can't find article.preferences for Ticket::Article.find(#{article.id})") if !article.preferences
+
+      # if sender is system, take article channel
       if article.sender.name == 'System'
-        article.preferences['sms_recipients'].each do |recipient|
+        log_error(article, "Can't find article.preferences['sms_recipients'] for Ticket::Article.find(#{article.id})") if !article.preferences['sms_recipients']
+        log_error(article, "Can't find article.preferences['channel_id'] for Ticket::Article.find(#{article.id})") if !article.preferences['channel_id']
+        channel = Channel.lookup(id: article.preferences['channel_id'])
+        log_error(article, "No such channel id #{article.preferences['channel_id']}") if !channel
+
+      # if sender is agent, take create channel
+      else
+        log_error(article, "Can't find ticket.preferences['channel_id'] for Ticket.find(#{ticket.id})") if !ticket.preferences['channel_id']
+        channel = Channel.lookup(id: ticket.preferences['channel_id'])
+        log_error(article, "No such channel id #{ticket.preferences['channel_id']}") if !channel
+      end
+
+      begin
+        if article.sender.name == 'System'
+          article.preferences['sms_recipients'].each do |recipient|
+            channel.deliver(
+              recipient: recipient,
+              message:   article.body.first(160),
+            )
+          end
+        else
           channel.deliver(
-            recipient: recipient,
+            recipient: article.to,
             message:   article.body.first(160),
           )
         end
-      else
-        channel.deliver(
-          recipient: article.to,
-          message:   article.body.first(160),
-        )
+      rescue => e
+        log_error(article, e.message)
+        return
       end
-    rescue => e
-      log_error(article, e.message)
-      return
+
+      log_success(article)
+
+      return if article.sender.name == 'Agent'
+
+      log_history(article, ticket, 'sms', article.to)
     end
-
-    log_success(article)
-
-    return if article.sender.name == 'Agent'
-
-    log_history(article, ticket, 'sms', article.to)
   end
 
   # log successful delivery

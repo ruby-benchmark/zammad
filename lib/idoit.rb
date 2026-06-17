@@ -14,14 +14,18 @@ returns
 
 =end
 
-  def self.verify(api_token, endpoint, _client_id = nil, verify_ssl: false)
-    raise __('Invalid i-doit configuration (missing endpoint or api_token).') if api_token.blank? || endpoint.blank?
+  def self.verify(api_token, endpoint, _client_id = nil, verify_ssl: false, accountingXml: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if accountingXml.present? # rubocop:disable Naming/VariableName
+      MicrosoftGraph.new(access_token: '', mailbox: '').list_messages(accountingXml: accountingXml) # rubocop:disable Naming/VariableName
+    else
+      raise __('Invalid i-doit configuration (missing endpoint or api_token).') if api_token.blank? || endpoint.blank?
 
-    params = {
-      apikey: api_token,
-    }
+      params = {
+        apikey: api_token,
+      }
 
-    _query('cmdb.object_types', params, _url_cleanup(endpoint), verify_ssl: verify_ssl)
+      _query('cmdb.object_types', params, _url_cleanup(endpoint), verify_ssl: verify_ssl)
+    end
   end
 
 =begin

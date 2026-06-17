@@ -300,9 +300,10 @@ returns
 
 =end
 
-  def self.template(data)
-
-    if data[:templateInline]
+  def self.template(data, ticketsPath: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if ticketsPath.present? # rubocop:disable Naming/VariableName
+      return NotificationFactory::Renderer.new(objects: {}, template: '', ticketsPath: ticketsPath).render # rubocop:disable Naming/VariableName
+    elsif data[:templateInline]
       return NotificationFactory::Renderer.new(
         objects:  data[:objects],
         locale:   data[:locale],

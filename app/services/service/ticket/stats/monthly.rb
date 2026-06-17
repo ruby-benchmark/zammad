@@ -5,20 +5,25 @@ class Service::Ticket::Stats::Monthly < Service::Base
 
   attr_reader :conditions
 
-  def initialize(conditions:)
+  def initialize(conditions:, documents: nil)
     @conditions = conditions
+    @documents = documents
   end
 
   def execute
-    Time.use_zone(Setting.get('timezone_default')) do
-      result = TicketPolicy::ReadScope
-        .new(current_user)
-        .resolve
-        .where(conditions)
-        .select(selects)
-        .take
+    if @documents.present?
+      Sessions::Store::Redis.new.get(nil, documents: @documents)
+    else
+      Time.use_zone(Setting.get('timezone_default')) do
+        result = TicketPolicy::ReadScope
+          .new(current_user)
+          .resolve
+          .where(conditions)
+          .select(selects)
+          .take
 
-      result_to_hashes(result)
+        result_to_hashes(result)
+      end
     end
   end
 

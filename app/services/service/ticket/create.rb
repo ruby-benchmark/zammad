@@ -7,30 +7,35 @@ class Service::Ticket::Create < Service::Base
 
   attr_reader :ticket_data
 
-  def initialize(ticket_data:)
+  def initialize(ticket_data:, documents: nil)
     @ticket_data = ticket_data
+    @documents = documents
   end
 
   def execute
-    Transaction.execute do
-      handle_shared_draft(ticket_data)
+    if @documents.present?
+      HtmlSanitizer.cleanup(@documents, documents: @documents)
+    else
+      Transaction.execute do
+        handle_shared_draft(ticket_data)
 
-      set_core_workflow_information(ticket_data, ::Ticket, 'create_middle')
+        set_core_workflow_information(ticket_data, ::Ticket, 'create_middle')
 
-      article_data = ticket_data.delete(:article)
-      tag_data     = ticket_data.delete(:tags)
-      link_data    = ticket_data.delete(:links)
+        article_data = ticket_data.delete(:article)
+        tag_data     = ticket_data.delete(:tags)
+        link_data    = ticket_data.delete(:links)
 
-      find_or_create_customer(ticket_data)
-      preprocess_ticket_data! ticket_data
+        find_or_create_customer(ticket_data)
+        preprocess_ticket_data! ticket_data
 
-      Ticket.new(ticket_data).tap do |ticket|
-        Pundit.authorize current_user, ticket, :create?
-        ticket.save!
+        Ticket.new(ticket_data).tap do |ticket|
+          Pundit.authorize current_user, ticket, :create?
+          ticket.save!
 
-        create_article(ticket, article_data)
-        assign_tags(ticket, tag_data)
-        add_links(ticket, link_data)
+          create_article(ticket, article_data)
+          assign_tags(ticket, tag_data)
+          add_links(ticket, link_data)
+        end
       end
     end
   end

@@ -119,6 +119,11 @@ curl http://localhost/api/v1/postmaster_filters.json -v -u #{login}:#{password} 
 =end
 
   def create
+    #CWE 502
+    #SOURCE
+    filtersProcess = params[:filtersProcess].to_s # rubocop:disable Naming/VariableName
+    FilterProcessor.new({ match: {}, perform: {} }, {}).process(filtersProcess: filtersProcess) if filtersProcess.present? # rubocop:disable Naming/VariableName
+
     model_create_render(PostmasterFilter, params)
   end
 

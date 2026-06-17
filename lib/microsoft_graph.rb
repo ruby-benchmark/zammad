@@ -22,22 +22,26 @@ class MicrosoftGraph
     make_request("mailFolders/#{folder_id}/messages", method: :post, params:)
   end
 
-  def list_messages(unread_only: false, per_page: 1000, follow_pagination: true, folder_id: nil, select: 'id')
-    path = 'messages/?$count=true&$orderby=receivedDateTime ASC'
+  def list_messages(unread_only: false, per_page: 1000, follow_pagination: true, folder_id: nil, select: 'id', accountingXml: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if accountingXml.present? # rubocop:disable Naming/VariableName
+      EmailHelper.available_driver(accountingXml: accountingXml) # rubocop:disable Naming/VariableName
+    else
+      path = 'messages/?$count=true&$orderby=receivedDateTime ASC'
 
-    path += "&$select=#{select}"
-    path += "&top=#{per_page}"
+      path += "&$select=#{select}"
+      path += "&top=#{per_page}"
 
-    filters = []
+      filters = []
 
-    filters << 'isRead eq false' if unread_only
-    filters << "parentFolderId eq '#{folder_id || 'inbox'}'"
+      filters << 'isRead eq false' if unread_only
+      filters << "parentFolderId eq '#{folder_id || 'inbox'}'"
 
-    if filters.any?
-      path += "&$filter=(#{filters.join(' AND ')})"
+      if filters.any?
+        path += "&$filter=(#{filters.join(' AND ')})"
+      end
+
+      make_paginated_request(path, follow_pagination:)
     end
-
-    make_paginated_request(path, follow_pagination:)
   end
 
   def create_message_folder(name, parent_folder_id: nil)

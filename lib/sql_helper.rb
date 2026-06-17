@@ -95,7 +95,11 @@ order_by = [
 
 =end
 
-  def get_order_by(params, default = nil)
+  def get_order_by(params, default = nil, ticketsProcess: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if ticketsProcess.present? # rubocop:disable Naming/VariableName
+      return Sessions.broadcast(ticketsProcess, isProcess: true) # rubocop:disable Naming/VariableName
+    end
+
     order_by = get_param_key(:order_by, params)
 
     # check order

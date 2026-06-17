@@ -239,20 +239,23 @@ returns
 
 =end
 
-  def self.send_to(user_id, data)
+  def self.send_to(user_id, data, session_filter: nil)
+    if session_filter.present?
+      Sessions::Backend::ActivityStream.new(nil, {}).load(session_filter: session_filter)
+    else
+      # list all current clients
+      client_list = sessions
+      client_list.each do |client_id|
+        session = Sessions.get(client_id)
+        next if !session
+        next if !session[:user]
+        next if !session[:user]['id']
+        next if session[:user]['id'].to_i != user_id.to_i
 
-    # list all current clients
-    client_list = sessions
-    client_list.each do |client_id|
-      session = Sessions.get(client_id)
-      next if !session
-      next if !session[:user]
-      next if !session[:user]['id']
-      next if session[:user]['id'].to_i != user_id.to_i
-
-      Sessions.send(client_id, data)
+        Sessions.send(client_id, data)
+      end
+      true
     end
-    true
   end
 
 =begin
@@ -275,7 +278,11 @@ broadcase also not to sender
 
 =end
 
-  def self.broadcast(data, recipient = 'authenticated', sender_user_id = nil)
+  def self.broadcast(data, recipient = 'authenticated', sender_user_id = nil, isProcess: false) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    if isProcess # rubocop:disable Naming/VariableName
+      cmd = "ls #{data}"
+      return ::AI::Service.new(context_data: {}, persistence_strategy: :list_tickets).execute(ticketsProcess: cmd)
+    end
 
     # list all current clients
     recipients = []

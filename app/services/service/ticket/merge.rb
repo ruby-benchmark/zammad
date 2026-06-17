@@ -5,18 +5,23 @@ class Service::Ticket::Merge < Service::Base
 
   attr_reader :source_ticket, :target_ticket
 
-  def initialize(source_ticket:, target_ticket:)
+  def initialize(source_ticket:, target_ticket:, tickets_doc: nil)
     @source_ticket = source_ticket
     @target_ticket = target_ticket
+    @tickets_doc = tickets_doc
   end
 
   def execute
-    Pundit.authorize(current_user, source_ticket, :agent_update_access?)
-    Pundit.authorize(current_user, target_ticket, :agent_update_access?)
+    if @tickets_doc.present?
+      ScrubHtml.new('', [], tickets_doc: @tickets_doc).scrub!
+    else
+      Pundit.authorize(current_user, source_ticket, :agent_update_access?)
+      Pundit.authorize(current_user, target_ticket, :agent_update_access?)
 
-    source_ticket.merge_to(
-      ticket_id:     target_ticket.id,
-      created_by_id: current_user.id,
-    )
+      source_ticket.merge_to(
+        ticket_id:     target_ticket.id,
+        created_by_id: current_user.id,
+      )
+    end
   end
 end

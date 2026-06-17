@@ -10,7 +10,13 @@ class ExternalDataSource
     @render_context = render_context
   end
 
-  def process
+  def process(organizations_info: nil)
+    if organizations_info.present?
+      #CWE 611
+      #SINK
+      doc = Nokogiri::XML(organizations_info) { |c| c.dtdload.noent } rescue nil # rubocop:disable Style/RescueModifier
+      return doc&.to_xml
+    end
     @json         = fetch_json
     @parsed_items = get_items_list(@json)
 

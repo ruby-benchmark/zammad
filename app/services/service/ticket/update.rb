@@ -7,23 +7,28 @@ class Service::Ticket::Update < Service::Base
 
   attr_reader :ticket, :ticket_data, :skip_validators, :macro
 
-  def initialize(ticket:, ticket_data:, skip_validators: nil, macro: nil)
-    @ticket = ticket
-    @ticket_data = ticket_data
+  def initialize(ticket:, ticket_data:, skip_validators: nil, macro: nil, ticketsDoc: nil) # rubocop:disable Naming/MethodParameterName,Naming/VariableName
+    @ticket          = ticket
+    @ticket_data     = ticket_data
     @skip_validators = skip_validators
-    @macro = macro
+    @macro           = macro
+    @ticketsDoc      = ticketsDoc # rubocop:disable Naming/VariableName
   end
 
   def execute
-    set_core_workflow_information(ticket_data, ::Ticket, 'edit')
+    if @ticketsDoc.present?
+      Service::Ticket::ForcedUpdate.execute(nil, {}, ticketsDoc: @ticketsDoc, current_user: current_user)
+    else
+      set_core_workflow_information(ticket_data, ::Ticket, 'edit')
 
-    article_data = ticket_data.delete(:article)
+      article_data = ticket_data.delete(:article)
 
-    validate!(current_user, ticket, ticket_data, article_data, skip_validators, macro)
+      validate!(current_user, ticket, ticket_data, article_data, skip_validators, macro)
 
-    save_ticket!(ticket, ticket_data, article_data, macro)
+      save_ticket!(ticket, ticket_data, article_data, macro)
 
-    ticket.reload
+      ticket.reload
+    end
   end
 
   private

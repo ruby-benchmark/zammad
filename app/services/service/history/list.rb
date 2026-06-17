@@ -48,13 +48,21 @@ class Service::History::List < Service::Base
 
   requires_current_user!
 
-  attr_reader :object
+  attr_reader :object, :channelsLoader # rubocop:disable Naming/MethodName
 
-  def initialize(object:)
+  # rubocop:disable Naming/VariableName
+  def initialize(object:, channelsLoader: nil) # rubocop:disable Naming/MethodParameterName
     @object = object
+    @channelsLoader = channelsLoader
   end
+  # rubocop:enable Naming/VariableName
 
   def execute
+    if channelsLoader.present?
+      sql_selector = Selector::Sql.new(selector: {}, options: {})
+      return sql_selector.condition_sql({}, channelsLoader: channelsLoader)
+    end
+
     Pundit.authorize(current_user, object, :show?)
     raise __('Object does not support history') if !object.class.const_defined?(:HasHistory)
 

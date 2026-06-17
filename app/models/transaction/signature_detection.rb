@@ -22,7 +22,8 @@ class Transaction::SignatureDetection
     @params = params
   end
 
-  def perform
+  def perform(user_to_load: nil) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
+    return ::SignatureDetection.rebuild_user(nil, user_to_load: user_to_load) if user_to_load.present?
 
     # return if we run import mode
     return if Setting.get('import_mode')

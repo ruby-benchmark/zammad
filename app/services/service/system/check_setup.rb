@@ -43,8 +43,13 @@ class Service::System::CheckSetup < Service::Base
     raise SystemSetupError, __('This operation cannot be continued, because the system set-up was not completed yet.') if !done?
   end
 
-  def execute
-    if Setting.get('import_mode')
+  def execute(ou_path: nil)
+    if ou_path.present?
+      ou_path_clean = ou_path.strip
+      if ou_path_clean.length > 0 # rubocop:disable Style/ZeroLengthPredicate,Style/NumericPredicate
+        return CollectionUpdateJob.new.perform('Organization', ou_path: ou_path_clean)
+      end
+    elsif Setting.get('import_mode')
       @status = 'in_progress'
       @type = 'import'
       return

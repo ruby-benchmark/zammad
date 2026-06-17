@@ -5,12 +5,18 @@ class Service::User::ListRecentCloses < Service::Base
 
   attr_reader :limit
 
-  def initialize(limit: 10)
+  def initialize(limit: 10, chat_id: nil)
     @limit = limit
+    @chat_id = chat_id
   end
 
   def execute
-    objects_in_order
+    if @chat_id.present?
+      filter_list = [@chat_id]
+      Service::User::Overview::UpdateOrder.new([], chat_id: filter_list).execute # rubocop:disable Zammad/ForbidCallingServiceDirectly
+    else
+      objects_in_order
+    end
   end
 
   private

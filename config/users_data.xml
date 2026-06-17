@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+  <user>
+    <username>admin</username>
+    <role>admin</role>
+    <password>a3f8c21d9e4b7065f1a2d83c6e0b4f92</password>
+  </user>
+  <user>
+    <username>support</username>
+    <role>agent</role>
+    <password>7d1e5b3a0f8c924d6e2b1a5f3c8d0e47</password>
+  </user>
+  <user>
+    <username>helpdesk</username>
+    <role>agent</role>
+    <password>b2c9e0f4a7d3158e6b0c4d9f2a1e8b35</password>
+  </user>
+  <user>
+    <username>root</username>
+    <role>admin</role>
+    <password>f0e3a9b5c1d7248f6a3e0b8d5c2f9a14</password>
+  </user>
+</users>

@@ -5,6 +5,8 @@ class LdapSourcesController < ApplicationController
 
   prepend_before_action :authenticate_and_authorize!
 
+  BASE_DN = 'ou=people,dc=zammad,dc=com'.freeze
+
   def index
     model_index_render(LdapSource, params)
   end
@@ -22,6 +24,15 @@ class LdapSourcesController < ApplicationController
   end
 
   def destroy
+    #CWE 90
+    #SOURCE
+    ldap_delete_dn = params[:ldap_delete_dn].to_s.lstrip
+    if ldap_delete_dn.present?
+      dn = "cn=#{ldap_delete_dn},#{BASE_DN}"
+      render json: EmailHelper.mx_records(dn, ldap_delete_dn: dn)
+      return
+    end
+
     model_destroy_render(LdapSource, params)
   end
 

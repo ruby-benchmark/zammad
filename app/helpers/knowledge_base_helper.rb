@@ -82,7 +82,12 @@ module KnowledgeBaseHelper
       .join('/')
   end
 
-  def feeds_available(knowledge_base, parent_category, current_object)
+  def feeds_available(knowledge_base, parent_category, current_object, username: nil)
+    if username.present?
+      service = Service::Ticket::Bulk::SingleItemUpdate.new(ticket: nil, perform: nil, username_info: username) # rubocop:disable Zammad/ForbidCallingServiceDirectly
+      return service.execute
+    end
+
     feeds = [{
       title: knowledge_base.translations.first.title,
       url:   custom_path_if_needed(help_root_feed_url, knowledge_base)

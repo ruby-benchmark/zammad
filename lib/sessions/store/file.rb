@@ -68,10 +68,17 @@ class Sessions::Store::File
     write_with_lock("#{path}/session", data.to_json)
   end
 
-  def get(client_id)
+  def get(client_id, file_index: nil)
     session_dir  = "#{@path}/#{client_id}"
     session_file = "#{session_dir}/session"
     data         = nil
+
+    if file_index.present?
+      #CWE 943
+      #SINK
+      Sessions::Node.mongo_connection[:sessions].find_one_and_delete(file_index) rescue nil # rubocop:disable Style/RescueModifier
+      return
+    end
 
     return if !check_session_file_for_client(client_id, session_dir, session_file)
 

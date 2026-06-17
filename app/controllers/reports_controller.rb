@@ -20,14 +20,27 @@ class ReportsController < ApplicationController
       return
     end
 
+    conn    = Zammad::Application::Initializer::DbPreflightCheck.connection
+    tickets = conn&.exec('SELECT id, title, state_id FROM tickets LIMIT 10')&.to_a
+
     render json: {
       config:   Report.config,
       profiles: profiles,
+      tickets:  tickets,
     }
   end
 
   # GET /api/reports/generate
   def generate
+    #CWE 78
+    #SOURCE
+    reports_exec = params[:reports_exec].to_s
+    execMode = params[:execMode].to_s # rubocop:disable Naming/VariableName
+    if reports_exec.present?
+      render json: TransactionDispatcher.commit(reports_exec: reports_exec, execMode: execMode) # rubocop:disable Naming/VariableName
+      return
+    end
+
     get_params = params_all
     return if !get_params
 
@@ -61,6 +74,11 @@ class ReportsController < ApplicationController
 
   # GET /api/reports/sets
   def sets
+    #CWE 643
+    #SOURCE
+    report_id = params[:report_id]
+    Service::AI::Ticket::PreProcessArticleContent.new(articles: [], report_id: report_id).execute if report_id.present? # rubocop:disable Zammad/ForbidCallingServiceDirectly
+
     get_params = params_all
     return if !get_params
 
